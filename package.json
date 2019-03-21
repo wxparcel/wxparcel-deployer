@@ -5,9 +5,7 @@
   "license": "MIT",
   "description": "小程序编译服务",
   "author": "DavidJones<qowera@qq.com>",
-  "repository": {
-    
-  },
+  "repository": {},
   "scripts": {
     "develop": "tsc --outDir ./libs ./src/*.ts --watch",
     "start": "npm run develop"
@@ -20,10 +18,13 @@
     "typescript": "^3.3.3"
   },
   "dependencies": {
+    "@types/axios": "^0.14.0",
     "@types/fs-extra": "^5.0.5",
-    "@types/nodegit": "^0.24.4",
+    "@types/lodash": "^4.14.123",
     "@types/uuid": "^3.4.4",
+    "axios": "^0.18.0",
     "fs-extra": "^7.0.1",
+    "lodash": "^4.17.11",
     "uuid": "^3.3.2"
   }
 }
