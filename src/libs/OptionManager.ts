@@ -7,6 +7,7 @@ export default class OptionManager {
   public uid: string
   public rootPath: string
   public tempPath: string
+  public uploadFile: string
   public devToolServer: string
   public deployServerPort: number
   public maxFileSize: number
@@ -15,6 +16,8 @@ export default class OptionManager {
     this.uid = uuid()
     this.rootPath = process.cwd()
     this.tempPath = path.join(this.rootPath, './.temporary')
+    this.uploadFile = 'upload'
+
     this.maxFileSize = 1024 * 1024 * 8
 
     this.configure(options)

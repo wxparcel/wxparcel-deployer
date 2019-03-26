@@ -21,12 +21,12 @@ export default class Client {
     this.request = axios.create(axiosOptions)
   }
 
-  public async uploadProject (folder: string): Promise<void> {
+  public async uploadProject (folder: string): Promise<any> {
     const { tempPath, uid } = this.options
     const zipFile = path.join(tempPath, 'deploy', `${uid}.zip`)
 
     await this.compress(folder, zipFile)
-    await this.upload('/upload', zipFile)
+    return await this.upload('/upload', zipFile)
   }
 
   public async compress (folder: string, zipFile: string): Promise<void> {
@@ -48,16 +48,21 @@ export default class Client {
       this.zip(file, folder, zip)
     }
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       fs.ensureDirSync(path.dirname(zipFile))
 
-      const stream = zip.generateNodeStream({ streamFiles: true })
-      stream.pipe(fs.createWriteStream(zipFile))
-      stream.on('end', resolve)
+      const writeStream = fs.createWriteStream(zipFile)
+      writeStream.once('error', reject)
+      writeStream.once('close', resolve)
+
+      const readStream = zip.generateNodeStream({ streamFiles: true })
+      readStream.pipe(writeStream)
+      readStream.once('error', reject)
+      readStream.once('end', () => writeStream.close())
     })
   }
 
-  public async upload (serverUrl: string, file: string): Promise<void> {
+  public async upload (serverUrl: string, file: string): Promise<any> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not found`))
     }
@@ -65,24 +70,24 @@ export default class Client {
     return new Promise((resolve, reject) => {
       const { maxFileSize } = this.options
       const { size } = fs.statSync(file)
-      const stream = fs.createReadStream(file)
-      stream.once('error', reject)
-
       if (size > maxFileSize) {
         return Promise.reject(new Error(`File size is over ${unitSize(maxFileSize)}`))
       }
 
+      const stream = fs.createReadStream(file)
+      stream.once('error', reject)
+      stream.once('end', () => stream.close())
+
       const headers = {
-        'Content-Encoding': 'gzip',
         'Content-Type': 'application/zip, application/octet-stream',
         "Content-Disposition": "attachment",
         'Content-Length': size
       }
 
-      this.request.post(serverUrl, stream, { headers }).then((response) => {
-        console.log(response)
-        resolve()
-      }).catch(reject)
+      return this.request
+        .post(serverUrl, stream, { headers })
+        .then(resolve)
+        .catch(reject)
     })
   }
 
