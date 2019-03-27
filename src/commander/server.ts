@@ -1,3 +1,4 @@
+import * as fs from 'fs-extra'
 import * as program from 'commander'
 import * as portscanner from 'portscanner'
 import chalk from 'chalk'
@@ -9,12 +10,23 @@ import * as pkg from '../../package.json'
 import { ServerCLIOptions } from '../types'
 
 export const server = async (options: ServerCLIOptions = {}) => {
-  let port = options.port
+  let { config: configFile, port } = options
   if (!port) {
     port = await portscanner.findAPortNotInUse(3000, 8000)
   }
 
+  let defaultOptions: any = {}
+  if (configFile) {
+    if (!fs.existsSync(configFile)) {
+      throw new Error(`Config file is not found, please ensure config file exists. ${configFile}`)
+    }
+
+    defaultOptions = require(configFile)
+    defaultOptions = defaultOptions.default || defaultOptions
+  }
+
   const globalOptions = new ServerOptions({
+    ...defaultOptions,
     devToolCli: options.devToolCli,
     devToolServer: options.devToolServ,
     deployServerPort: port
@@ -45,10 +57,8 @@ export const server = async (options: ServerCLIOptions = {}) => {
 program
 .command('server')
 .description('start deploy server')
+.option('-c', '--config <config>', 'settting config file')
 .option('-p, --port <port>', 'setting server port, default use idle port')
 .option('--dev-tool-cli <devToolCli>', 'setting devtool cli file path')
 .option('--dev-tool-serv <devToolServ>', 'setting devtool server url')
 .action(server)
-
-// '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
-// '/Users/zhongjiahao/Develop/yijian/qinxuan-wxapp'

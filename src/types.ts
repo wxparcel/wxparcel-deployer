@@ -34,11 +34,13 @@ export interface ClientBaseOptions extends BaseOptions {
   deployServer?: string
 }
 export interface ServerCLIOptions {
+  config?: string
   port?: number
   devToolCli?: string
   devToolServ?: string
 }
 export interface ClientCLIOptions {
+  config?: string
   folder?: string
   deployServ?: string
 }
