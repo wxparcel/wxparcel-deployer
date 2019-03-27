@@ -1,11 +1,15 @@
 {
   "name": "wxparcel-deployer",
   "version": "1.0.0",
-  "main": "index.js",
+  "bin": "./bin/cli",
+  "main": "./libs/index.js",
   "license": "MIT",
   "description": "小程序发布服务",
   "author": "DavidJones<qowera@qq.com>",
-  "repository": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wxparcel/wxparcel-deployer.git"
+  },
   "pre-commit": [
     "lint-staged"
   ],
