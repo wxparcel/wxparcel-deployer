@@ -13,8 +13,13 @@ export const deploy = async (folder, options: ClientCLIOptions = {}) => {
   const logger = new Logger(globalOptions)
   logger.connect(stdoutServ)
 
-  const client = new Client(globalOptions)
-  await client.uploadProject(folder)
+  try {
+    const client = new Client(globalOptions)
+    await client.uploadProject(folder)
+
+  } catch (error) {
+    stdoutServ.error(error)
+  }
 }
 
 program

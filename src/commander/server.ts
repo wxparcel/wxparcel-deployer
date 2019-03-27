@@ -20,15 +20,26 @@ export const server = async (options: ServerCLIOptions = {}) => {
     deployServerPort: port
   })
 
+  if (!(globalOptions.devToolCli || globalOptions.devToolServer)) {
+    throw new Error('Please set devtool cli or devtool server url')
+  }
+
   const logger = new Logger(globalOptions)
   logger.connect(stdoutServ)
 
-  const deployer = new Deployer(globalOptions)
-  await deployer.start()
+  try {
+    const deployer = new Deployer(globalOptions)
+    await deployer.start()
   
-  stdoutServ.trace(`Deploy server is running.`)
-  stdoutServ.trace(`Version: ${chalk.cyan.bold(pkg.version)}`)
-  stdoutServ.trace(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
+    stdoutServ.trace(`Deploy server is running.`)
+    stdoutServ.trace(`Version: ${chalk.cyan.bold(pkg.version)}`)
+    stdoutServ.trace(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
+    globalOptions.devToolCli && stdoutServ.trace(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
+    globalOptions.devToolServer && stdoutServ.trace(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
+
+  } catch (error) {
+    stdoutServ.error(error)
+  }
 }
 
 program

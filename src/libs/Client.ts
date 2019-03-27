@@ -41,7 +41,7 @@ export default class Client {
     const zip = new Zip()
     const rootPath = findRootFolder(folder)
     const projFile = path.join(rootPath, 'project.config.json')
-    
+
     if (fs.existsSync(projFile)) {
       this.zip(rootPath, rootPath, zip)
 
@@ -70,7 +70,7 @@ export default class Client {
       return Promise.reject(new Error(`File ${file} is not found`))
     }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((reject) => {
       const { maxFileSize } = this.options
       const { size } = fs.statSync(file)
       if (size > maxFileSize) {
@@ -86,11 +86,9 @@ export default class Client {
         "Content-Disposition": "attachment",
         'Content-Length': size
       }
-
-      return this.request
-        .post(serverUrl, stream, { headers })
-        .then(resolve)
-        .catch(reject)
+      
+      return this.request.post(serverUrl, stream, { headers })
+      
     })
   }
 
