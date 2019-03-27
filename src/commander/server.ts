@@ -36,22 +36,19 @@ export const server = async (options: ServerCLIOptions = {}) => {
     throw new Error('Please set devtool cli or devtool server url')
   }
 
-  const logger = new Logger(globalOptions)
-  logger.connect(stdoutServ)
+  const logger = new Logger({ type: globalOptions.logType })
+  logger.listen(stdoutServ)
 
-  try {
-    const deployer = new Deployer(globalOptions)
-    await deployer.start()
+  const deployer = new Deployer(globalOptions)
+  await deployer.start()
 
-    stdoutServ.trace(`Deploy server is running.`)
-    stdoutServ.trace(`Version: ${chalk.cyan.bold(pkg.version)}`)
-    stdoutServ.trace(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
-    globalOptions.devToolCli && stdoutServ.trace(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
-    globalOptions.devToolServer && stdoutServ.trace(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
-
-  } catch (error) {
-    stdoutServ.error(error)
-  }
+  stdoutServ.clear()
+  stdoutServ.trace(chalk.gray.bold('WXParcel Deployer Server'))
+  stdoutServ.trace(`Version: ${chalk.cyan.bold(pkg.version)}`)
+  stdoutServ.trace(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
+  globalOptions.devToolCli && stdoutServ.trace(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
+  globalOptions.devToolServer && stdoutServ.trace(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
+  stdoutServ.trace(chalk.blue('Deploy server is running, please make sure wx devtool has been logined.'))
 }
 
 program

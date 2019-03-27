@@ -21,12 +21,12 @@ export default class Client {
     this.request = axios.create(axiosOptions)
   }
 
-  public async uploadProject (folder: string): Promise<any> {
+  public async uploadProject (folder: string, version: string, description: string): Promise<any> {
     const { uid, releasePath } = this.options
     const zipFile = path.join(releasePath, `${uid}.zip`)
 
     await this.compress(folder, zipFile)
-    const response = await this.upload('/upload', zipFile)
+    const response = await this.upload('/upload', zipFile, { version, description })
 
     fs.removeSync(zipFile)
     return response
@@ -65,7 +65,7 @@ export default class Client {
     })
   }
 
-  public async upload (serverUrl: string, file: string): Promise<any> {
+  public async upload (serverUrl: string, file: string, data?: { [key: string]: any }): Promise<any> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not found`))
     }

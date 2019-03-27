@@ -16,6 +16,10 @@ export enum LogTypes {
   console
 }
 
+export interface LoggerOptions {
+  type?: keyof typeof LogTypes
+}
+
 export interface BaseOptions {
   tempPath?: string
   maxFileSize?: number
@@ -41,6 +45,8 @@ export interface ServerCLIOptions {
 }
 export interface ClientCLIOptions {
   config?: string
+  version?: string
+  description?: string
   folder?: string
   deployServ?: string
 }
