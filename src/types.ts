@@ -39,6 +39,7 @@ export interface ServerCLIOptions {
   devToolServ?: string
 }
 export interface ClientCLIOptions {
+  folder?: string
   deployServ?: string
 }
 

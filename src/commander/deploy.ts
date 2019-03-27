@@ -5,7 +5,7 @@ import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
 import { ClientCLIOptions } from '../types'
 
-export const deploy = async (folder, options: ClientCLIOptions = {}) => {
+export const deploy = async (options: ClientCLIOptions = {}) => {
   const globalOptions = new ClientOptions({
     deployServer: options.deployServ
   })
@@ -14,6 +14,7 @@ export const deploy = async (folder, options: ClientCLIOptions = {}) => {
   logger.connect(stdoutServ)
 
   try {
+    const folder = options.folder || globalOptions.rootPath
     const client = new Client(globalOptions)
     await client.uploadProject(folder)
 
@@ -23,7 +24,8 @@ export const deploy = async (folder, options: ClientCLIOptions = {}) => {
 }
 
 program
-.command('deploy <folder>')
+.command('deploy')
 .description('deploy wx miniprogram')
+.option('--folder', 'setting wx mini program project folder path')
 .option('--server', 'setting deploy server url, default 127.0.0.1:3000')
 .action(deploy)
