@@ -70,7 +70,7 @@ export default class Client {
       return Promise.reject(new Error(`File ${file} is not found`))
     }
 
-    return new Promise((reject) => {
+    return new Promise((_, reject) => {
       const { maxFileSize } = this.options
       const { size } = fs.statSync(file)
       if (size > maxFileSize) {
@@ -86,9 +86,8 @@ export default class Client {
         "Content-Disposition": "attachment",
         'Content-Length': size
       }
-      
+
       return this.request.post(serverUrl, stream, { headers })
-      
     })
   }
 

@@ -6,8 +6,8 @@ import { ServerResponse } from '../types'
 export default class Connection {
   public request: IncomingMessage
   public response: HttpServerResponse
-  private head: { [key: string]: string }
-  private status: number
+  public head: { [key: string]: string }
+  public status: number
 
   constructor (request: IncomingMessage, response: HttpServerResponse) {
     this.request = request

@@ -41,6 +41,11 @@ export default class Server {
         connection.setMethods(methods)
         connection.setCros()
 
+        if (connection.status !== 200) {
+          connection.toJson()
+          return true
+        }
+
         await handle(params, connection)
         return true
       }

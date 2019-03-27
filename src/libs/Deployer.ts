@@ -19,15 +19,15 @@ export default class Deployer {
 
   public start (): Promise<void> {
     return new Promise((resolve) => {
-      const { ip, deployServerPort } = this.options
+      const { deployServerPort } = this.options
       this.devTool = new DevTool(this.options)
   
       this.server = new Server()
       this.server.route('GET', '/status', this.status.bind(this))
       this.server.route('POST', '/upload', this.upload.bind(this))
       this.server.route('GET,POST,PUT,DELETE,PATCH', '/:otherwise*', this.notFound.bind(this))
-
-      this.server.listen(deployServerPort, ip, resolve)
+      
+      this.server.listen(deployServerPort, resolve)
     })
   }
 

@@ -72,6 +72,6 @@ export class ClientOptions extends OptionManager {
     super(options)
 
     this.releasePath = options.releasePath && path.isAbsolute(options.releasePath) ? options.releasePath : path.join(this.tempPath, options.releasePath || 'release')
-    this.deployServer = options.deployServer || `127.0.0.1:3000`
+    this.deployServer = options.deployServer || `http://${this.ip}:3000`
   }
 }
