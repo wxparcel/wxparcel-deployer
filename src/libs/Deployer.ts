@@ -21,12 +21,12 @@ export default class Deployer {
     return new Promise((resolve) => {
       const { deployServerPort } = this.options
       this.devTool = new DevTool(this.options)
-  
+
       this.server = new Server()
       this.server.route('GET', '/status', this.status.bind(this))
       this.server.route('POST', '/upload', this.upload.bind(this))
       this.server.route('GET,POST,PUT,DELETE,PATCH', '/:otherwise*', this.notFound.bind(this))
-      
+
       this.server.listen(deployServerPort, resolve)
     })
   }
@@ -44,7 +44,7 @@ export default class Deployer {
 
     const uploadFile = path.join(uploadPath, `${uid}.zip`)
     await this.tranfer(uploadFile, request)
-    
+
     const zip = new Zip()
     const projFolder = path.join(deployPath, uid)
     const contents = await zip.loadAsync(fs.readFileSync(uploadFile))

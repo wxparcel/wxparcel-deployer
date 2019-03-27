@@ -83,7 +83,7 @@ export default class Client {
 
       const headers = {
         'Content-Type': 'application/zip, application/octet-stream',
-        "Content-Disposition": "attachment",
+        'Content-Disposition': 'attachment',
         'Content-Length': size
       }
 
@@ -101,7 +101,7 @@ export default class Client {
         const destination = file.replace(relativeTo, '')
         fileMap.push({ file, destination })
       }
-  
+
       if (stat.isDirectory()) {
         const folder = path.isAbsolute(file) ? file : path.join(file, relativeTo)
         const files = fs.readdirSync(file)

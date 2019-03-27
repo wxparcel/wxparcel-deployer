@@ -31,7 +31,7 @@ export default class DevTool {
           response: responseInterceptors
         }
       }
-  
+
       this.request = axios.create(axiosOptions)
 
     } else if (this.options.devToolCli) {
@@ -46,7 +46,7 @@ export default class DevTool {
 
   /**
    * 登陆
-   * 
+   *
    * @param qrcodeCallback 二维码处理回调
    */
   public async login (qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
@@ -62,7 +62,7 @@ export default class DevTool {
         if (!/^data:image\/jpeg;base64/.test(qrcode)) {
           return Promise.reject(new Error('QRcode is not a base64 data'))
         }
-    
+
         qrcodeCallback(qrcode)
 
       } else if (this.command) {
@@ -76,7 +76,7 @@ export default class DevTool {
           '--login-qr-output', `base64@${qrcodeFile}`,
           '--login-result-output', `${statsFile}`
         ]
-    
+
         await this.command(params)
 
         let qrcode = fs.readFileSync(qrcodeFile).toString()
@@ -94,7 +94,7 @@ export default class DevTool {
 
   /**
    * 上传代码
-   * 
+   *
    * @param folder 项目文件夹
    * @param qrcodeCallback 二维码处理回调
    */
@@ -116,10 +116,10 @@ export default class DevTool {
             pathName: pages[0]
           }
         }
-  
+
         const response = await this.request.get('/preview', { params })
         const { data: qrcode } = response
-  
+
         qrcodeCallback(`data:image/jpeg;base64,${qrcode}`)
 
       } else if (this.command) {
@@ -133,7 +133,7 @@ export default class DevTool {
           '--preview-qr-output', `base64@${qrcodeFile}`,
           '--preview-info-output', statsFile
         ]
-    
+
         await this.command(params)
 
         let qrcode = fs.readFileSync(qrcodeFile).toString()
@@ -141,12 +141,12 @@ export default class DevTool {
       }
     }
 
-    return await this.execTask(task)
+    return this.execTask(task)
   }
 
   /**
    * 上传代码
-   * 
+   *
    * @param folder 项目文件夹
    * @param version 发布版本号
    * @param description 发布描述
@@ -165,7 +165,7 @@ export default class DevTool {
           desc: description,
           infooutput: statsFile
         }
-  
+
         await this.request.get('/upload', { params })
 
       } else if (this.command) {
@@ -174,17 +174,17 @@ export default class DevTool {
           '--upload-desc', encodeURIComponent(description),
           '--upload-info-output', statsFile
         ]
-    
+
         await this.command(params)
       }
     }
 
-    return await this.execTask(task)
+    return this.execTask(task)
   }
 
   /**
    * 自动预览
-   * 
+   *
    * @param folder 项目文件夹
    */
   public async autoPreview (folder: string): Promise<any> {
@@ -199,7 +199,7 @@ export default class DevTool {
           projectpath: folder,
           infooutput: statsFile
         }
-  
+
         await this.request.get('/autopreview', { params })
 
       } else if (this.command) {
@@ -207,12 +207,12 @@ export default class DevTool {
           '--auto-preview', folder,
           '--auto-preview-info-output', statsFile
         ]
-    
+
         await this.command(params)
       }
     }
 
-    return await this.execTask(task)
+    return this.execTask(task)
   }
 
   private async execTask (task: (statsFile: string) => void): Promise<any> {
@@ -237,7 +237,7 @@ export default class DevTool {
           }
         }
       }
-      
+
       let watcher = fs.watch(statsFile, { persistent: true }, watchFile)
       await task(statsFile)
     })

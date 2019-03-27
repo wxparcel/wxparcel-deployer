@@ -30,7 +30,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
   try {
     const deployer = new Deployer(globalOptions)
     await deployer.start()
-  
+
     stdoutServ.trace(`Deploy server is running.`)
     stdoutServ.trace(`Version: ${chalk.cyan.bold(pkg.version)}`)
     stdoutServ.trace(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
