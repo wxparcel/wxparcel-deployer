@@ -12,9 +12,14 @@ export interface ServerResponse {
   message: string
 }
 
+export enum LogTypes {
+  console
+}
+
 export interface BaseOptions {
   tempPath?: string
   maxFileSize?: number
+  logType?: keyof typeof LogTypes
 }
 export interface ServerBaseOptions extends BaseOptions {
   uploadPath?: string

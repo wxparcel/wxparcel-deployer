@@ -1,20 +1,22 @@
 {
-  "name": "wxparcel-web-compiler",
+  "name": "wxparcel-deployer",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
-  "description": "小程序编译服务",
+  "description": "小程序发布服务",
   "author": "DavidJones<qowera@qq.com>",
   "repository": {},
   "scripts": {
-    "develop": "tsc --outDir ./libs ./src/*.ts --watch",
+    "develop": "tsc --outDir ./libs ./src/*.ts --watch --target es5",
     "start": "npm run develop"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.4.32",
     "@types/axios": "^0.14.0",
+    "@types/chalk": "^2.2.0",
     "@types/commander": "^2.12.2",
     "@types/fs-extra": "^5.0.5",
+    "@types/ip": "^1.1.0",
     "@types/jszip": "^3.1.5",
     "@types/lodash": "^4.14.123",
     "@types/node": "^11.10.5",
@@ -30,12 +32,15 @@
     "adm-zip": "^0.4.13",
     "async": "^2.6.2",
     "axios": "^0.18.0",
+    "chalk": "^2.4.2",
     "commander": "^2.19.0",
     "fs-extra": "^7.0.1",
+    "ip": "^1.1.5",
     "jszip": "^3.2.1",
     "lodash": "^4.17.11",
     "path-to-regexp": "^3.0.0",
     "portscanner": "^2.2.0",
+    "pretty-error": "^2.1.1",
     "uuid": "^3.3.2"
   }
 }

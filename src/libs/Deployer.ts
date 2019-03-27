@@ -17,25 +17,22 @@ export default class Deployer {
     this.options = options
   }
 
-  public start () {
-    this.devTool = new DevTool(this.options)
+  public start (): Promise<void> {
+    return new Promise((resolve) => {
+      const { ip, deployServerPort } = this.options
+      this.devTool = new DevTool(this.options)
+  
+      this.server = new Server()
+      this.server.route('GET', '/status', this.status.bind(this))
+      this.server.route('POST', '/upload', this.upload.bind(this))
+      this.server.route('GET,POST,PUT,DELETE,PATCH', '/:otherwise*', this.notFound.bind(this))
 
-    this.server = new Server()
-    this.server.route('GET', '/status', this.status.bind(this))
-    this.server.route('GET', '/login', this.login.bind(this))
-    this.server.route('POST', '/upload', this.upload.bind(this))
-    this.server.route('GET,POST,PUT,DELETE,PATCH', '/:otherwise*', this.notFound.bind(this))
-    this.server.listen(this.options.deployServerPort)
+      this.server.listen(deployServerPort, ip, resolve)
+    })
   }
 
   private async status (_, conn: Connection): Promise<void> {
     conn.toJson({ message: 'okaya, server is running.' })
-  }
-
-  private async login (_, conn: Connection): Promise<void> {
-    // this.devTool.login((qrcode: string) => {
-    //   this.wrapJsonResponse(request, response, { data: qrcode })
-    // })
   }
 
   private async upload (_, conn: Connection): Promise<void> {
