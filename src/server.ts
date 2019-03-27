@@ -4,7 +4,7 @@ import Deployer from './libs/Deployer'
 
 portscanner.findAPortNotInUse(3000, 8000).then(async (idlePort) => {
   let options = new OptionManager({
-    devToolServer: 'http://127.0.0.1:54790',
+    devToolServer: 'http://127.0.0.1:49881',
     deployServerPort: idlePort
   })
 

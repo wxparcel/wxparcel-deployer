@@ -9,9 +9,11 @@ export interface ServerResponse {
   message: string
 }
 
-
-
 export interface WXParcelOptions {
+  tempPath?: string
+  releasePath?: string
+  uploadPath?: string
+  deployPath?: string
   deployServerPort?: number
   devToolServer?: string
   maxFileSize?: number

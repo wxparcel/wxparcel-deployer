@@ -8,9 +8,9 @@ const options = new OptionManager({
 const client = new Client(options)
 client.uploadProject('/Users/zhongjiahao/Develop/yijian/qinxuan-wxapp')
 .then((response: any) => {
-  const { message } = response.data
-  console.log(message)
+  // const { message } = response.data
+  // console.log(message)
 })
 .catch((error) => {
-  console.log(error.message)
+  // console.log(error.message)
 })

@@ -22,11 +22,14 @@ export default class Client {
   }
 
   public async uploadProject (folder: string): Promise<any> {
-    const { tempPath, uid } = this.options
-    const zipFile = path.join(tempPath, 'deploy', `${uid}.zip`)
+    const { uid, releasePath } = this.options
+    const zipFile = path.join(releasePath, `${uid}.zip`)
 
     await this.compress(folder, zipFile)
-    return await this.upload('/upload', zipFile)
+    const response = await this.upload('/upload', zipFile)
+
+    fs.removeSync(zipFile)
+    return response
   }
 
   public async compress (folder: string, zipFile: string): Promise<void> {

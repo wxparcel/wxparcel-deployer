@@ -34,18 +34,17 @@ export default class DevTool {
   private async execTask (task: (statsFile: string) => void): Promise<any> {
     const { tempPath, uid } = this.options
     const statsFile = path.join(tempPath, `./stats/${uid}.json`)
-
     fs.ensureFileSync(statsFile)
-    await task(statsFile)
 
-    return new Promise((resolve, reject) => {
-      const changeHandle = (eventType: string) => {
+    return new Promise(async (resolve, reject) => {
+      let watchFile = (eventType: string) => {
         switch (eventType) {
           case 'change': {
             watcher.close()
 
             try {
               let content = fs.readJSONSync(statsFile)
+              fs.removeSync(statsFile)
               resolve(content)
 
             } catch (error) {
@@ -54,8 +53,9 @@ export default class DevTool {
           }
         }
       }
-  
-      const watcher = fs.watch(statsFile, { persistent: true }, changeHandle)
+      
+      let watcher = fs.watch(statsFile, { persistent: true }, watchFile)
+      await task(statsFile)
     })
   }
 
