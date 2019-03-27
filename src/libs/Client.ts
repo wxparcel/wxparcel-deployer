@@ -2,20 +2,20 @@ import * as fs from 'fs-extra'
 import * as path from 'path'
 import Zip = require('jszip')
 import axios, { AxiosInstance } from 'axios'
-import OptionManager from './OptionManager'
+import { ClientOptions } from './OptionManager'
 import { unitSize } from '../share/fns'
 import { validProject, findRootFolder } from '../share/wx'
-import { WxParcelZipSource } from '../types'
+import { ClientZipSource } from '../types'
 
 export default class Client {
-  private options: OptionManager
+  private options: ClientOptions
   private request: AxiosInstance
 
-  constructor (options: OptionManager) {
+  constructor (options: ClientOptions) {
     this.options = options
 
     const axiosOptions = {
-      baseURL: 'http://127.0.0.1:3000'
+      baseURL: this.options.deployServer
     }
 
     this.request = axios.create(axiosOptions)
@@ -95,7 +95,7 @@ export default class Client {
   }
 
   private findFiles (file: string, relativeTo: string) {
-    const fileMap: Array<WxParcelZipSource> = []
+    const fileMap: Array<ClientZipSource> = []
 
     const findDeep = (file: string): void => {
       const stat = fs.statSync(file)

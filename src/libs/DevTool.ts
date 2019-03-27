@@ -2,10 +2,10 @@ import * as path from 'path'
 import * as fs from 'fs-extra'
 import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
-import OptionManager from './OptionManager'
+import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
 import { spawnPromisify } from '../share/fns'
-import { Stdout, WxParcelQrCodeCallback } from '../types'
+import { Stdout, DevToolQRCodeHandle } from '../types'
 
 const responseInterceptors = (response) => {
   const { status, data: message } = response
@@ -17,11 +17,11 @@ const responseInterceptors = (response) => {
 }
 
 export default class DevTool {
-  private options: OptionManager
+  private options: ServerOptions
   private request: AxiosInstance
   private command: (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout) => Promise<any>
 
-  constructor (options: OptionManager) {
+  constructor (options: ServerOptions) {
     this.options = options
 
     if (this.options.devToolServer) {
@@ -49,7 +49,7 @@ export default class DevTool {
    * 
    * @param qrcodeCallback 二维码处理回调
    */
-  public async login (qrcodeCallback: WxParcelQrCodeCallback): Promise<any> {
+  public async login (qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
     const task = async (statsFile) => {
       if (this.request) {
         const params = {
@@ -98,7 +98,7 @@ export default class DevTool {
    * @param folder 项目文件夹
    * @param qrcodeCallback 二维码处理回调
    */
-  public async preview (folder: string, qrcodeCallback: WxParcelQrCodeCallback): Promise<any> {
+  public async preview (folder: string, qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
     const task = async (statsFile) => {
       const valid = validProject(folder)
       if (valid !== true) {

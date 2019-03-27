@@ -1,8 +1,9 @@
+import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
 import { Connection } from '../libs/libs/Server'
 
 export type Stdout = (data: Buffer, type?: string) => void
 
-export type ServerMiddle = (connection: Connection, request: IncomingMessage, response: ServerResponse) => Promise<any>
+export type ServerMiddle = (connection: Connection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
 export type ServerRouteHandle = (params: any, connection: Connection) => Promise<any>
 export interface ServerResponse {
   status: number
@@ -11,41 +12,34 @@ export interface ServerResponse {
   message: string
 }
 
-export interface DeployerOptions {
+export interface BaseOptions {
   tempPath?: string
-  releasePath?: string
+  maxFileSize?: number
+}
+export interface ServerBaseOptions extends BaseOptions {
   uploadPath?: string
   deployPath?: string
   qrcodePath?: string
   devToolCli?: string
   devToolServer?: string
   deployServerPort?: number
-  maxFileSize?: number
+}
+export interface ClientBaseOptions extends BaseOptions {
+  releasePath?: string
+  deployServer?: string
+}
+export interface ServerCLIOptions {
+  port?: number
+  devToolCli?: string
+  devToolServ?: string
+}
+export interface ClientCLIOptions {
+  deployServ?: string
 }
 
-export interface WXParcelDeployerRepsonseOptions {
-  methods?: string | Array<string>
-  code?: number
-  data?: any
-  status?: number
-  message?: string
-}
+export type DevToolQRCodeHandle = (qrcode: string) => void
 
-
-
-
-
-
-
-
-import { IncomingMessage, ServerResponse } from 'http'
-
-export type WxParcelQrCodeCallback = (qrcode: string) => void
-
-
-export interface WxParcelZipSource {
+export interface ClientZipSource {
   file: string
   destination: string
 }
-
-

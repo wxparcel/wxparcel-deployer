@@ -2,18 +2,18 @@ import * as fs from 'fs-extra'
 import * as path from 'path'
 import { IncomingMessage } from 'http'
 import Zip = require('jszip')
-import OptionsManager from './OptionManager'
+import { ServerOptions } from './OptionManager'
 import Server from './Server'
 import Connection from './Connection'
 import DevTool from './DevTool'
 import { writeFilePromisify } from '../share/fns'
 
 export default class Deployer {
-  private options: OptionsManager
+  private options: ServerOptions
   private devTool: DevTool
   private server: Server
 
-  constructor (options: OptionsManager) {
+  constructor (options: ServerOptions) {
     this.options = options
   }
 
