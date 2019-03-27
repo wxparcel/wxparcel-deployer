@@ -1,5 +1,7 @@
 import * as fs from 'fs-extra'
 import { promisify } from 'util'
+import { spawn, SpawnOptions } from 'child_process'
+import { Stdout } from '../types'
 
 export const writeFilePromisify = promisify(fs.writeFile.bind(fs))
 
@@ -13,4 +15,17 @@ export const unitSize = (size: number, amount: number = 1024, units: Array<strin
   }
 
   return loop(size, units) + units[0]
+}
+
+export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout) => {
+  return new Promise((resolve) => {
+    const cp = spawn(cli, params, options)
+
+    if (typeof stdout === 'function') {
+      cp.stdout.on('data', (data) => stdout(data, 'out'))
+      cp.stderr.on('data', (data) => stdout(data, 'err'))
+    }
+
+    cp.on('exit', (code) => resolve(code))
+  })
 }

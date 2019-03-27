@@ -1,5 +1,7 @@
 import { Connection } from '../libs/libs/Server'
 
+export type Stdout = (data: Buffer, type?: string) => void
+
 export type ServerMiddle = (connection: Connection, request: IncomingMessage, response: ServerResponse) => Promise<any>
 export type ServerRouteHandle = (params: any, connection: Connection) => Promise<any>
 export interface ServerResponse {
@@ -9,13 +11,15 @@ export interface ServerResponse {
   message: string
 }
 
-export interface WXParcelOptions {
+export interface DeployerOptions {
   tempPath?: string
   releasePath?: string
   uploadPath?: string
   deployPath?: string
-  deployServerPort?: number
+  qrcodePath?: string
+  devToolCli?: string
   devToolServer?: string
+  deployServerPort?: number
   maxFileSize?: number
 }
 
