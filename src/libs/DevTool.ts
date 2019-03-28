@@ -45,6 +45,33 @@ export default class DevTool {
   }
 
   /**
+   * 打开工具或指定项目
+   *
+   * @param folder 项目文件夹
+   */
+  public async open (folder: string): Promise<any> {
+    const valid = validProject(folder)
+    if (valid !== true) {
+      return Promise.reject(valid)
+    }
+
+    if (this.request) {
+      const params = {
+        projectpath: encodeURIComponent(folder)
+      }
+
+      await this.request.get('/open', { params })
+
+    } else if (this.command) {
+      const params = [
+        '--open', folder
+      ]
+
+      await this.command(params)
+    }
+  }
+
+  /**
    * 登陆
    *
    * @param qrcodeCallback 二维码处理回调
@@ -84,12 +111,48 @@ export default class DevTool {
       }
     }
 
-    const response = await this.execTask(task)
+    const response = await this.execute(task)
     if (response.status !== 'SUCCESS') {
       return Promise.reject(new Error(response.error))
     }
 
     return response
+  }
+
+  /**
+   * 获取登陆二维码
+   */
+  public async loginQrCode (): Promise<string> {
+    if (this.request) {
+      const params = {
+        format: 'base64'
+      }
+
+      const response = await this.request.get('/login', { params })
+      const { data: qrcode } = response
+      if (!/^data:image\/jpeg;base64/.test(qrcode)) {
+        return Promise.reject(new Error('QRcode is not a base64 data'))
+      }
+
+      return qrcode
+    }
+
+    if (this.command) {
+      const { uid, qrcodePath } = this.options
+      const qrcodeFile = path.join(qrcodePath, uid)
+      fs.ensureFileSync(qrcodeFile)
+
+      const params = [
+        '--login',
+        '--login-qr-output', `base64@${qrcodeFile}`
+      ]
+
+      let promise = this.watchFile(qrcodeFile)
+      this.command(params)
+
+      let qrcode = await promise
+      return qrcode.toString()
+    }
   }
 
   /**
@@ -110,7 +173,7 @@ export default class DevTool {
 
         const params = {
           format: 'base64',
-          projectpath: folder,
+          projectpath: encodeURIComponent(folder),
           infooutput: statsFile,
           compilecondition: {
             pathName: pages[0]
@@ -141,7 +204,7 @@ export default class DevTool {
       }
     }
 
-    return this.execTask(task)
+    return this.execute(task)
   }
 
   /**
@@ -160,7 +223,7 @@ export default class DevTool {
 
       if (this.request) {
         const params = {
-          projectpath: folder,
+          projectpath: encodeURIComponent(folder),
           version: version,
           desc: description,
           infooutput: statsFile
@@ -179,7 +242,34 @@ export default class DevTool {
       }
     }
 
-    return this.execTask(task)
+    return this.execute(task)
+  }
+
+  /**
+   * 自动化测试
+   *
+   * @param folder 项目文件夹
+   */
+  public async test (folder: string): Promise<any> {
+    const valid = validProject(folder)
+    if (valid !== true) {
+      return Promise.reject(valid)
+    }
+
+    if (this.request) {
+      const params = {
+        projectpath: encodeURIComponent(folder)
+      }
+
+      await this.request.get('/test', { params })
+
+    } else if (this.command) {
+      const params = [
+        '--test', folder
+      ]
+
+      await this.command(params)
+    }
   }
 
   /**
@@ -196,7 +286,7 @@ export default class DevTool {
 
       if (this.request) {
         const params = {
-          projectpath: folder,
+          projectpath: encodeURIComponent(folder),
           infooutput: statsFile
         }
 
@@ -212,23 +302,77 @@ export default class DevTool {
       }
     }
 
-    return this.execTask(task)
+    return this.execute(task)
   }
 
-  private async execTask (task: (statsFile: string) => void): Promise<any> {
+  /**
+   * 关闭当前项目窗口
+   *
+   * @param folder 项目文件夹
+   */
+  public async close (folder: string): Promise<any> {
+    const valid = validProject(folder)
+    if (valid !== true) {
+      return Promise.reject(valid)
+    }
+
+    if (this.request) {
+      const params = {
+        projectpath: encodeURIComponent(folder)
+      }
+
+      await this.request.get('/close', { params })
+
+    } else if (this.command) {
+      const params = [
+        '--close', folder
+      ]
+
+      await this.command(params)
+    }
+  }
+
+  /**
+   * 关闭开发者工具
+   */
+  public async quit (): Promise<any> {
+    if (this.request) {
+      await this.request.get('/quit')
+
+    } else if (this.command) {
+      const params = [
+        '--quit'
+      ]
+
+      await this.command(params)
+    }
+  }
+
+  private async execute (task: (statsFile: string) => void): Promise<any> {
     const { tempPath, uid } = this.options
     const statsFile = path.join(tempPath, `./stats/${uid}.json`)
     fs.ensureFileSync(statsFile)
 
-    return new Promise(async (resolve, reject) => {
-      let watchFile = (eventType: string) => {
+    let promise = this.watchFile(statsFile)
+    await task(statsFile)
+
+    let content = await promise
+    return JSON.parse(content.toString())
+  }
+
+  private watchFile (file: string): Promise<Buffer> {
+    if (!fs.existsSync(file)) {
+      return Promise.reject(new Error(`File ${file} is not exists`))
+    }
+
+    return new Promise((resolve, reject) => {
+      let handle = function handle (eventType: string) {
         switch (eventType) {
           case 'change': {
             watcher.close()
 
             try {
-              let content = fs.readJSONSync(statsFile)
-              fs.removeSync(statsFile)
+              let content = fs.readFileSync(file)
               resolve(content)
 
             } catch (error) {
@@ -238,8 +382,7 @@ export default class DevTool {
         }
       }
 
-      let watcher = fs.watch(statsFile, { persistent: true }, watchFile)
-      await task(statsFile)
+      let watcher = fs.watch(file, { persistent: true }, handle)
     })
   }
 }

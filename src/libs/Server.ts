@@ -90,4 +90,12 @@ export default class Server {
       })
     }
   }
+
+  public destory () {
+    this.middlewares.splice(0)
+    this.server.close()
+
+    this.middlewares = null
+    this.server = null
+  }
 }

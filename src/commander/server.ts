@@ -49,6 +49,17 @@ export const server = async (options: ServerCLIOptions = {}) => {
   globalOptions.devToolCli && stdoutServ.trace(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
   globalOptions.devToolServer && stdoutServ.trace(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
   stdoutServ.trace(chalk.blue('Deploy server is running, please make sure wx devtool has been logined.'))
+
+  let handleProcessSigint = process.exit.bind(process)
+  let handleProcessExit = function () {
+    deployer && deployer.destory()
+
+    process.removeListener('exit', handleProcessExit)
+    process.removeListener('SIGINT', handleProcessSigint)
+  }
+
+  process.on('exit', handleProcessExit)
+  process.on('SIGINT', handleProcessSigint)
 }
 
 program

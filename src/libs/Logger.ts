@@ -99,6 +99,7 @@ export default class Logger {
     stdoutServ.on('trace', (message: string) => this.trace(message))
     stdoutServ.on('error', (message: string) => this.error(message))
     stdoutServ.on('warn', (message: string) => this.warn(message))
+    stdoutServ.on('clear', () => this.clear())
     stdoutServ.on('loading', ({ value, total, message }) => this.loading(value, total, message))
   }
 }

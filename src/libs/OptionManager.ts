@@ -20,7 +20,7 @@ export class OptionManager {
     this.uid = uuid()
     this.ip = ip.address()
     this.rootPath = process.cwd()
-    this.tempPath = options.tempPath && path.isAbsolute(options.tempPath) ? options.tempPath : path.join(this.rootPath, options.tempPath || '.temporary')
+    this.tempPath = options.tempPath && path.isAbsolute(options.tempPath) ? options.tempPath : path.join(this.rootPath, options.tempPath || '.runtime')
     this.logType = options.logType || 'console'
     this.maxFileSize = 1024 * 1024 * 8
     this.isOSX = 'darwin' === os.platform()

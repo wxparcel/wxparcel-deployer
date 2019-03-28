@@ -14,9 +14,11 @@ export default class Deployer {
   private options: ServerOptions
   private devTool: DevTool
   private server: Server
+  private commandQueue: Array<Promise<any>>
 
   constructor (options: ServerOptions) {
     this.options = options
+    this.commandQueue = []
   }
 
   public start (): Promise<void> {
@@ -26,6 +28,7 @@ export default class Deployer {
 
       this.server = new Server()
       this.server.route('GET', '/status', this.status.bind(this))
+      this.server.route('GET', '/login', this.login.bind(this))
       this.server.route('POST', '/upload', this.upload.bind(this))
       this.server.route('GET,POST,PUT,DELETE,PATCH', '/:otherwise*', this.notFound.bind(this))
 
@@ -33,11 +36,24 @@ export default class Deployer {
     })
   }
 
-  private async status (_, conn: Connection): Promise<void> {
+  private async status (params: RegExpExecArray, conn: Connection): Promise<void> {
     conn.toJson({ message: 'okaya, server is running.' })
   }
 
-  private async upload (_, conn: Connection): Promise<void> {
+  private async login (params: RegExpExecArray, conn: Connection): Promise<void> {
+    this.commandQueue.length > 0 && await Promise.all(this.commandQueue)
+
+    let devToolPromise = this.devTool.loginQrCode()
+    this.commandQueue.push(devToolPromise)
+
+    let qrcode = await devToolPromise
+    let index = this.commandQueue.indexOf(devToolPromise)
+    this.commandQueue.splice(index, 1)
+
+    conn.toJson({ data: qrcode, message: 'Upload completed.' })
+  }
+
+  private async upload (params: RegExpExecArray, conn: Connection): Promise<void> {
     const { request } = conn
     const { uploadPath, deployPath } = this.options
     await this.ensureDirs(uploadPath, deployPath)
@@ -47,7 +63,7 @@ export default class Deployer {
     const zip = new Zip()
     const projFolder = path.join(deployPath, uploadFileName)
     const contents = await zip.loadAsync(fs.readFileSync(uploadFile))
-    const promises = Object.keys(contents.files).map(async (file) => {
+    const transferPromises = Object.keys(contents.files).map(async (file) => {
       if (!zip.file(file)) {
         return
       }
@@ -61,8 +77,16 @@ export default class Deployer {
       return writeFilePromisify(file, content)
     })
 
-    await Promise.all(promises)
-    await this.devTool.upload(projFolder, version, message)
+    let promises = [].concat(transferPromises, this.commandQueue)
+    promises.length > 0 && await Promise.all(promises)
+
+    let devToolPromise = this.devTool.upload(projFolder, version, message)
+    this.commandQueue.push(devToolPromise)
+
+    await devToolPromise
+    let index = this.commandQueue.indexOf(devToolPromise)
+    this.commandQueue.splice(index, 1)
+
     await this.removeFiles(uploadFile, projFolder)
 
     conn.toJson({ message: 'Upload completed.' })
@@ -107,5 +131,14 @@ export default class Deployer {
   private removeFiles (...files: Array<string>) {
     let promises = files.map((dir) => fs.remove(dir))
     return Promise.all(promises)
+  }
+
+  public destory (): void {
+    this.server.destory()
+    this.commandQueue.splice(0)
+
+    this.options = null
+    this.devTool = null
+    this.commandQueue = null
   }
 }
