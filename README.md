@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/wxparcel/wxparcel-deployer.svg?branch=master)](https://travis-ci.org/wxparcel/wxparcel-deployer)
+
 # WxParcel Deployer - 微信发布工具
 
 开发阶段请勿使用
