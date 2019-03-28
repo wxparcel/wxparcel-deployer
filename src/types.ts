@@ -1,5 +1,5 @@
 import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
-import { Connection } from '../libs/libs/Server'
+import Connection from './libs/Connection'
 
 export type Stdout = (data: Buffer, type?: string) => void
 
@@ -14,6 +14,10 @@ export interface ServerResponse {
 
 export enum LogTypes {
   console
+}
+
+export interface LoggerOptions {
+  type?: keyof typeof LogTypes
 }
 
 export interface BaseOptions {
@@ -34,11 +38,15 @@ export interface ClientBaseOptions extends BaseOptions {
   deployServer?: string
 }
 export interface ServerCLIOptions {
+  config?: string
   port?: number
   devToolCli?: string
   devToolServ?: string
 }
 export interface ClientCLIOptions {
+  config?: string
+  version?: string
+  message?: string
   folder?: string
   deployServ?: string
 }

@@ -29,10 +29,11 @@
     "start": "npm run develop"
   },
   "devDependencies": {
-    "@types/adm-zip": "^0.4.32",
     "@types/axios": "^0.14.0",
     "@types/chalk": "^2.2.0",
     "@types/commander": "^2.12.2",
+    "@types/form-data": "^2.2.1",
+    "@types/formidable": "^1.0.31",
     "@types/fs-extra": "^5.0.5",
     "@types/ip": "^1.1.0",
     "@types/jszip": "^3.1.5",
@@ -49,11 +50,13 @@
     "typescript": "^3.3.3"
   },
   "dependencies": {
-    "adm-zip": "^0.4.13",
-    "async": "^2.6.2",
     "axios": "^0.18.0",
     "chalk": "^2.4.2",
+    "cli-progress": "^2.1.1",
+    "command-exists": "^1.2.8",
     "commander": "^2.19.0",
+    "form-data": "^2.3.3",
+    "formidable": "^1.2.1",
     "fs-extra": "^7.0.1",
     "ip": "^1.1.5",
     "jszip": "^3.2.1",

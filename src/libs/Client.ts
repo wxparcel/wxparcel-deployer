@@ -1,9 +1,14 @@
 import * as fs from 'fs-extra'
 import * as path from 'path'
+import { promisify } from 'util'
+import forEach = require('lodash/forEach')
+import commandExists = require('command-exists')
 import Zip = require('jszip')
 import axios, { AxiosInstance } from 'axios'
+import FormData = require('form-data')
 import { ClientOptions } from './OptionManager'
-import { unitSize } from '../share/fns'
+import stdout from '../services/stdout'
+import { unitSize, spawnPromisify } from '../share/fns'
 import { validProject, findRootFolder } from '../share/wx'
 import { ClientZipSource } from '../types'
 
@@ -21,12 +26,14 @@ export default class Client {
     this.request = axios.create(axiosOptions)
   }
 
-  public async uploadProject (folder: string): Promise<any> {
+  public async uploadProject (folder: string, version: string, message: string): Promise<any> {
+    message = message || await this.getGitMessage(folder)
+
     const { uid, releasePath } = this.options
     const zipFile = path.join(releasePath, `${uid}.zip`)
 
     await this.compress(folder, zipFile)
-    const response = await this.upload('/upload', zipFile)
+    const response = await this.upload('/upload', zipFile, { uid, version, message })
 
     fs.removeSync(zipFile)
     return response
@@ -65,12 +72,12 @@ export default class Client {
     })
   }
 
-  public async upload (serverUrl: string, file: string): Promise<any> {
+  public async upload (serverUrl: string, file: string, data: { [key: string]: any }): Promise<any> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not found`))
     }
 
-    return new Promise((_, reject) => {
+    return new Promise(async (resolve, reject) => {
       const { maxFileSize } = this.options
       const { size } = fs.statSync(file)
       if (size > maxFileSize) {
@@ -81,14 +88,51 @@ export default class Client {
       stream.once('error', reject)
       stream.once('end', () => stream.close())
 
+      const formData = new FormData()
+      formData.append('file', stream)
+      forEach(data, (value, name) => formData.append(name, value))
+
+      const contentSzie = await promisify(formData.getLength.bind(formData))()
+
       const headers = {
-        'Content-Type': 'application/zip, application/octet-stream',
-        'Content-Disposition': 'attachment',
-        'Content-Length': size
+        'Accept': 'application/json',
+        'Content-Type': `multipart/form-data; charset=utf-8; boundary="${formData.getBoundary()}"`,
+        'Content-Length': contentSzie
       }
 
-      return this.request.post(serverUrl, stream, { headers })
+      const config = {
+        headers,
+        onUploadProgress (event) {
+          const { loaded, total } = event
+          stdout.loading(loaded, total, 'Upload file')
+        }
+      }
+
+      const result = await this.request.post(serverUrl, formData, config)
+      resolve(result)
     })
+  }
+
+  private async getGitMessage (folder: string): Promise<string> {
+    const git = path.join(folder, '.git')
+    const exists = fs.existsSync(git)
+    if (!exists) {
+      return ''
+    }
+
+    const support = await promisify(commandExists.bind(null))('git')
+    if (!support) {
+      return ''
+    }
+
+    let message = ''
+    await spawnPromisify('git', ['log', '-1', '--pretty=%B'], {}, (buffer, type) => {
+      if (type === 'out') {
+        message = buffer.toString()
+      }
+    })
+
+    return message
   }
 
   private findFiles (file: string, relativeTo: string) {

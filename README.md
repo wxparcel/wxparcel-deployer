@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/wxparcel/wxparcel-deployer.svg?branch=master)](https://travis-ci.org/wxparcel/wxparcel-deployer)
+
 # WxParcel Deployer - 微信发布工具
 
 开发阶段请勿使用
@@ -15,7 +17,7 @@ $ wxparcel-deployer server --dev-tool-serv http://127.0.0.1:512345
 
 # 发布机 (CI/Local 客户端)
 # 发布项目
-$ wxparcel-deployer deploy .
+$ wxparcel-deployer deploy
 ```
 
 ## 本地开发调试工具
