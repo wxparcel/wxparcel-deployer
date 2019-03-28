@@ -42,7 +42,7 @@ export default class Deployer {
     const { uploadPath, deployPath } = this.options
     await this.ensureDirs(uploadPath, deployPath)
 
-    const { file: uploadFile, version, description } = await this.transfer(request)
+    const { file: uploadFile, version, message } = await this.transfer(request)
     const uploadFileName = path.basename(uploadFile).replace(path.extname(uploadFile), '')
     const zip = new Zip()
     const projFolder = path.join(deployPath, uploadFileName)
@@ -62,7 +62,7 @@ export default class Deployer {
     })
 
     await Promise.all(promises)
-    await this.devTool.upload(projFolder, version, description)
+    await this.devTool.upload(projFolder, version, message)
     await this.removeFiles(uploadFile, projFolder)
 
     conn.toJson({ message: 'Upload completed.' })

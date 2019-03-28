@@ -9,7 +9,7 @@ import stdoutServ from '../services/stdout'
 import { ClientCLIOptions } from '../types'
 
 export const deploy = async (options: ClientCLIOptions = {}) => {
-  let { config: configFile, version, description } = options
+  let { config: configFile, version, message } = options
   let defaultOptions: any = {}
 
   if (configFile) {
@@ -38,10 +38,6 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
     }
   }
 
-  if (!options.hasOwnProperty('description')) {
-    description = 'Deployed by wxparcel deployer server'
-  }
-
   if (!version) {
     throw new Error('Version is not defined, please use option `--version`')
   }
@@ -51,7 +47,7 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
 
   stdoutServ.clear()
   stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
-  await client.uploadProject(folder, version, description)
+  await client.uploadProject(folder, version, message)
 
   stdoutServ.ok(`Project ${chalk.bold(folder)} upload completed`)
 }
@@ -61,7 +57,7 @@ program
 .description('deploy wx miniprogram')
 .option('-c, --config <config>', 'settting config file')
 .option('-v, --version <version>', 'setting deploy version')
-.option('-d, --description <description>', 'setting deploy description')
+.option('-d, --message <message>', 'setting deploy message')
 .option('--folder <folder>', 'setting wx mini program project folder path')
 .option('--server <server>', 'setting deploy server url, default 0.0.0.0:3000')
 .action(deploy)

@@ -46,7 +46,7 @@ export interface ServerCLIOptions {
 export interface ClientCLIOptions {
   config?: string
   version?: string
-  description?: string
+  message?: string
   folder?: string
   deployServ?: string
 }
