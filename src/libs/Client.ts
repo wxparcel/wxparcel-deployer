@@ -7,6 +7,7 @@ import Zip = require('jszip')
 import axios, { AxiosInstance } from 'axios'
 import FormData = require('form-data')
 import { ClientOptions } from './OptionManager'
+import stdout from '../services/stdout'
 import { unitSize, spawnPromisify } from '../share/fns'
 import { validProject, findRootFolder } from '../share/wx'
 import { ClientZipSource } from '../types'
@@ -99,7 +100,15 @@ export default class Client {
         'Content-Length': contentSzie
       }
 
-      const result = await this.request.post(serverUrl, formData, { headers })
+      const config = {
+        headers,
+        onUploadProgress (event) {
+          const { loaded, total } = event
+          stdout.loading(loaded, total, 'Upload file')
+        }
+      }
+
+      const result = await this.request.post(serverUrl, formData, config)
       resolve(result)
     })
   }

@@ -1,10 +1,12 @@
 import chalk from 'chalk'
 import PrettyError = require('pretty-error')
+import { Bar } from 'cli-progress'
 import { LogTypes, LoggerOptions } from '../types'
 
 export default class Logger {
   private type: keyof typeof LogTypes | Array<keyof typeof LogTypes>
   private silence: boolean
+  private loadingBar: any
 
   get useConsole () {
     if (this.type === 'console') {
@@ -25,6 +27,27 @@ export default class Logger {
 
   public configure (options: LoggerOptions): void {
     this.type = options.type || 'console'
+  }
+
+  public loading (value: number, total: number, message: string = ''): any {
+    if (value >= total) {
+      if (this.loadingBar) {
+        this.loadingBar.stop()
+        this.loadingBar = null
+      }
+
+    } else {
+      if (!this.loadingBar) {
+        let options = {
+          format: `${message} [{bar}] {percentage}% | {value}/{total}`
+        }
+
+        this.loadingBar = new Bar(options)
+        this.loadingBar.start(total, 0)
+      }
+
+      this.loadingBar.update(value)
+    }
   }
 
   public error (reason): void {
@@ -76,6 +99,6 @@ export default class Logger {
     stdoutServ.on('trace', (message: string) => this.trace(message))
     stdoutServ.on('error', (message: string) => this.error(message))
     stdoutServ.on('warn', (message: string) => this.warn(message))
-    stdoutServ.on('clear', (isSoft: boolean) => this.clear(isSoft))
+    stdoutServ.on('loading', ({ value, total, message }) => this.loading(value, total, message))
   }
 }
