@@ -1,5 +1,5 @@
 import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
-import { Connection } from '../libs/libs/Server'
+import Connection from './libs/Connection'
 
 export type Stdout = (data: Buffer, type?: string) => void
 

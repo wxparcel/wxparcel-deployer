@@ -54,7 +54,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
 program
 .command('server')
 .description('start deploy server')
-.option('-c', '--config <config>', 'settting config file')
+.option('-c, --config <config>', 'settting config file')
 .option('-p, --port <port>', 'setting server port, default use idle port')
 .option('--dev-tool-cli <devToolCli>', 'setting devtool cli file path')
 .option('--dev-tool-serv <devToolServ>', 'setting devtool server url')

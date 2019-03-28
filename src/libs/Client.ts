@@ -1,7 +1,10 @@
 import * as fs from 'fs-extra'
 import * as path from 'path'
+import { promisify } from 'util'
+import forEach = require('lodash/forEach')
 import Zip = require('jszip')
 import axios, { AxiosInstance } from 'axios'
+import FormData = require('form-data')
 import { ClientOptions } from './OptionManager'
 import { unitSize } from '../share/fns'
 import { validProject, findRootFolder } from '../share/wx'
@@ -26,7 +29,7 @@ export default class Client {
     const zipFile = path.join(releasePath, `${uid}.zip`)
 
     await this.compress(folder, zipFile)
-    const response = await this.upload('/upload', zipFile, { version, description })
+    const response = await this.upload('/upload', zipFile, { uid, version, description })
 
     fs.removeSync(zipFile)
     return response
@@ -65,12 +68,12 @@ export default class Client {
     })
   }
 
-  public async upload (serverUrl: string, file: string, data?: { [key: string]: any }): Promise<any> {
+  public async upload (serverUrl: string, file: string, data: { [key: string]: any }): Promise<any> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not found`))
     }
 
-    return new Promise((_, reject) => {
+    return new Promise(async (resolve, reject) => {
       const { maxFileSize } = this.options
       const { size } = fs.statSync(file)
       if (size > maxFileSize) {
@@ -81,13 +84,20 @@ export default class Client {
       stream.once('error', reject)
       stream.once('end', () => stream.close())
 
+      const formData = new FormData()
+      formData.append('file', stream)
+      forEach(data, (value, name) => formData.append(name, value))
+
+      const contentSzie = await promisify(formData.getLength.bind(formData))()
+
       const headers = {
-        'Content-Type': 'application/zip, application/octet-stream',
-        'Content-Disposition': 'attachment',
-        'Content-Length': size
+        'Accept': 'application/json',
+        'Content-Type': `multipart/form-data; charset=utf-8; boundary="${formData.getBoundary()}"`,
+        'Content-Length': contentSzie
       }
 
-      return this.request.post(serverUrl, stream, { headers })
+      const result = await this.request.post(serverUrl, formData, { headers })
+      resolve(result)
     })
   }
 

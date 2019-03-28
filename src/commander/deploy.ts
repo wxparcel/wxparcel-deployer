@@ -49,6 +49,7 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
   const folder = options.folder || globalOptions.rootPath
   const client = new Client(globalOptions)
 
+  stdoutServ.clear()
   stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
   await client.uploadProject(folder, version, description)
 
@@ -58,9 +59,9 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
 program
 .command('deploy')
 .description('deploy wx miniprogram')
-.option('-c', '--config <config>', 'settting config file')
-.option('-v', '--version <version>', 'setting deploy version')
-.option('-d', '--description <description>', 'setting deploy description')
+.option('-c, --config <config>', 'settting config file')
+.option('-v, --version <version>', 'setting deploy version')
+.option('-d, --description <description>', 'setting deploy description')
 .option('--folder <folder>', 'setting wx mini program project folder path')
 .option('--server <server>', 'setting deploy server url, default 0.0.0.0:3000')
 .action(deploy)

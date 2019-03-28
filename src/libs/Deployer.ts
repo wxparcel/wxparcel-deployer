@@ -1,6 +1,8 @@
 import * as fs from 'fs-extra'
 import * as path from 'path'
 import { IncomingMessage } from 'http'
+import { IncomingForm } from 'formidable'
+import forEach = require('lodash/forEach')
 import Zip = require('jszip')
 import { ServerOptions } from './OptionManager'
 import Server from './Server'
@@ -37,16 +39,13 @@ export default class Deployer {
 
   private async upload (_, conn: Connection): Promise<void> {
     const { request } = conn
-    const { uid, uploadPath, deployPath } = this.options
+    const { uploadPath, deployPath } = this.options
+    await this.ensureDirs(uploadPath, deployPath)
 
-    fs.ensureDirSync(uploadPath)
-    fs.ensureDirSync(deployPath)
-
-    const uploadFile = path.join(uploadPath, `${uid}.zip`)
-    await this.tranfer(uploadFile, request)
-
+    const { file: uploadFile, version, description } = await this.transfer(request)
+    const uploadFileName = path.basename(uploadFile).replace(path.extname(uploadFile), '')
     const zip = new Zip()
-    const projFolder = path.join(deployPath, uid)
+    const projFolder = path.join(deployPath, uploadFileName)
     const contents = await zip.loadAsync(fs.readFileSync(uploadFile))
     const promises = Object.keys(contents.files).map(async (file) => {
       if (!zip.file(file)) {
@@ -63,10 +62,8 @@ export default class Deployer {
     })
 
     await Promise.all(promises)
-    await this.devTool.upload(projFolder, '1.0.0', '测试CI, 请勿用作预览版本或提审版本')
-
-    fs.removeSync(uploadFile)
-    fs.removeSync(projFolder)
+    await this.devTool.upload(projFolder, version, description)
+    await this.removeFiles(uploadFile, projFolder)
 
     conn.toJson({ message: 'Upload completed.' })
   }
@@ -76,17 +73,39 @@ export default class Deployer {
     conn.toJson()
   }
 
-  private tranfer (file: string, request: IncomingMessage): Promise<void> {
+  private transfer (request: IncomingMessage): Promise<any> {
     return new Promise((resolve, reject) => {
-      const writeStream = fs.createWriteStream(file)
-      writeStream.on('error', reject)
+      const { uploadPath } = this.options
+      const form = new IncomingForm()
+      const formData = {}
 
-      request.pipe(writeStream)
-      request.on('error', reject)
-      request.on('end', () => {
-        writeStream.close()
-        resolve()
+      form.uploadDir = uploadPath
+
+      form.parse(request, (error, fields, _files) => {
+        if (error) {
+          reject(error)
+          return
+        }
+
+        let files = {}
+        forEach(_files, (file, name) => {
+          files[name] = file.path
+        })
+
+        Object.assign(formData, fields, files)
       })
+
+      form.on('end', () => resolve(formData))
     })
+  }
+
+  private ensureDirs (...dirs: Array<string>) {
+    let promises = dirs.map((dir) => fs.ensureDir(dir))
+    return Promise.all(promises)
+  }
+
+  private removeFiles (...files: Array<string>) {
+    let promises = files.map((dir) => fs.remove(dir))
+    return Promise.all(promises)
   }
 }
