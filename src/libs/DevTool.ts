@@ -4,7 +4,7 @@ import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
 import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
-import { spawnPromisify } from '../share/fns'
+import { spawnPromisify, killToken as genKillToken } from '../share/fns'
 import { Stdout, DevToolQRCodeHandle } from '../types'
 
 const responseInterceptors = (response) => {
@@ -19,7 +19,7 @@ const responseInterceptors = (response) => {
 export default class DevTool {
   private options: ServerOptions
   private request: AxiosInstance
-  private command: (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout) => Promise<any>
+  private command: (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => Promise<any>
 
   constructor (options: ServerOptions) {
     this.options = options
@@ -35,8 +35,8 @@ export default class DevTool {
       this.request = axios.create(axiosOptions)
 
     } else if (this.options.devToolCli) {
-      this.command = async (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout) => {
-        const code = await spawnPromisify(this.options.devToolCli, params, options, stdout)
+      this.command = async (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => {
+        const code = await spawnPromisify(this.options.devToolCli, params, options, stdout, killToken)
         if (code !== 0) {
           return Promise.reject(new Error(`Command ${params} fail, error code: ${code}`))
         }
@@ -104,7 +104,7 @@ export default class DevTool {
           '--login-result-output', `${statsFile}`
         ]
 
-        await this.command(params)
+        await this.command(params, null, null)
 
         let qrcode = fs.readFileSync(qrcodeFile).toString()
         qrcodeCallback(qrcode)
@@ -117,42 +117,6 @@ export default class DevTool {
     }
 
     return response
-  }
-
-  /**
-   * 获取登陆二维码
-   */
-  public async loginQrCode (): Promise<string> {
-    if (this.request) {
-      const params = {
-        format: 'base64'
-      }
-
-      const response = await this.request.get('/login', { params })
-      const { data: qrcode } = response
-      if (!/^data:image\/jpeg;base64/.test(qrcode)) {
-        return Promise.reject(new Error('QRcode is not a base64 data'))
-      }
-
-      return qrcode
-    }
-
-    if (this.command) {
-      const { uid, qrcodePath } = this.options
-      const qrcodeFile = path.join(qrcodePath, uid)
-      fs.ensureFileSync(qrcodeFile)
-
-      const params = [
-        '--login',
-        '--login-qr-output', `base64@${qrcodeFile}`
-      ]
-
-      let promise = this.watchFile(qrcodeFile)
-      this.command(params)
-
-      let qrcode = await promise
-      return qrcode.toString()
-    }
   }
 
   /**

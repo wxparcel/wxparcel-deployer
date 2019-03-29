@@ -1,7 +1,13 @@
 import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
+import { ChildProcess } from 'child_process'
 import Connection from './libs/Connection'
 
 export type Stdout = (data: Buffer, type?: string) => void
+
+export interface ChildProcessMap {
+  token: Symbol
+  kill: () => void
+}
 
 export type ServerMiddle = (connection: Connection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
 export type ServerRouteHandle = (params: any, connection: Connection) => Promise<any>
@@ -21,6 +27,7 @@ export interface LoggerOptions {
 }
 
 export interface BaseOptions {
+  uid?: string
   tempPath?: string
   maxFileSize?: number
   logType?: keyof typeof LogTypes

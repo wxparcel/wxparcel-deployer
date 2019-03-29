@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import forEach = require('lodash/forEach')
 import PrettyError = require('pretty-error')
 import { Bar } from 'cli-progress'
 import { LogTypes, LoggerOptions } from '../types'
@@ -50,45 +51,40 @@ export default class Logger {
     }
   }
 
-  public error (reason): void {
-    if (this.useConsole === true && this.silence !== true) {
-      if (reason instanceof Error || reason instanceof TypeError) {
-        let pe = new PrettyError()
-        reason.message = chalk.red(reason.message)
-
-        let message = pe.render(reason)
-        this.trace(message)
-      } else {
-        reason = chalk.red(reason)
-        this.trace(reason)
-      }
+  public error (message: string | Error): void {
+    if (message instanceof Error) {
+      return this.trace(message, chalk.red.bind(chalk))
     }
+
+    return this.log(message)
   }
 
-  public warn (reason: string | Error): void {
-    if (this.useConsole === true && this.silence !== true) {
-      if (reason instanceof Error) {
-        let pe = new PrettyError()
-        reason.message = chalk.yellow(reason.message)
-
-        let message = pe.render(reason)
-        this.trace(message)
-
-      } else {
-        reason = chalk.yellow(reason)
-        this.trace(reason)
-      }
+  public warn (message: string | Error): void {
+    if (message instanceof Error) {
+      return this.trace(message, chalk.yellow.bind(chalk))
     }
+
+    return this.log(message)
   }
 
-  public trace (message): void {
-    if (this.useConsole === true && this.silence !== true) {
-      this.log(message)
+  public trace (message: string | Error, color?: (message: string) => string): void {
+    if (!(message instanceof Error)) {
+      message = new Error(message)
     }
+
+    if (typeof color === 'function') {
+      message.message = color(message.message)
+    }
+
+    let pe = new PrettyError()
+    message = pe.render(message)
+    return this.log(message)
   }
 
-  public log (...message): void {
-    console.log(...message)
+  public log (...message: string[]): void {
+    if (this.useConsole === true && this.silence !== true) {
+      console.log(...message)
+    }
   }
 
   public clear (isSoft = true): void {
@@ -96,9 +92,10 @@ export default class Logger {
   }
 
   public listen (stdoutServ): void {
+    stdoutServ.on('log', (message: string) => this.log(message))
     stdoutServ.on('trace', (message: string) => this.trace(message))
-    stdoutServ.on('error', (message: string) => this.error(message))
     stdoutServ.on('warn', (message: string) => this.warn(message))
+    stdoutServ.on('error', (message: string) => this.error(message))
     stdoutServ.on('clear', () => this.clear())
     stdoutServ.on('loading', ({ value, total, message }) => this.loading(value, total, message))
   }
