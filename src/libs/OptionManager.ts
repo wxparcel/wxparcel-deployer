@@ -50,6 +50,8 @@ export class ServerOptions extends OptionManager {
     this.deployPath = options.deployPath && path.isAbsolute(options.deployPath) ? options.deployPath : path.join(this.tempPath, options.deployPath || 'deploy')
     this.qrcodePath = options.qrcodePath && path.isAbsolute(options.qrcodePath) ? options.qrcodePath : path.join(this.tempPath, options.qrcodePath || 'qrcode')
     this.devToolCli = this.isOSX ? '/Applications/wechatwebdevtools.app/Contents/MacOS/cli' : ''
+
+    this.configure(options)
   }
 
   public configure (options: ServerBaseOptions) {
