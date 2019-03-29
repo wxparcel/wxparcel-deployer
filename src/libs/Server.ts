@@ -59,6 +59,7 @@ export default class Server {
 
         if (connection.status !== 200) {
           connection.toJson()
+          connection.destroy()
           return true
         }
 
@@ -67,8 +68,10 @@ export default class Server {
 
         } catch (error) {
           stdoutServ.error(error)
+
           connection.setStatus(500)
           connection.toJson({ message: error.message })
+          connection.destroy()
         }
 
         return true

@@ -80,5 +80,9 @@ export class ClientOptions extends OptionManager {
 
     this.releasePath = options.releasePath && path.isAbsolute(options.releasePath) ? options.releasePath : path.join(this.tempPath, options.releasePath || 'release')
     this.deployServer = options.deployServer || `http://${this.ip}:3000`
+
+    if (!/https?:\/\//.test(this.deployServer)) {
+      throw new Error(`Deploy server error, ${this.deployServer}`)
+    }
   }
 }

@@ -8,6 +8,7 @@ export default class Connection {
   public response: HttpServerResponse
   public head: { [key: string]: string }
   public status: number
+  public flush: boolean
 
   constructor (request: IncomingMessage, response: HttpServerResponse) {
     this.request = request
@@ -15,13 +16,22 @@ export default class Connection {
 
     this.head = {}
     this.status = 200
+    this.flush = false
   }
 
   public setCros (): void {
+    if (this.flush === true) {
+      return
+    }
+
     this.writeHead('Access-Control-Allow-Credentials', 'true')
   }
 
   public setMethods (methods: Array<string>): void {
+    if (this.flush === true) {
+      return
+    }
+
     this.writeHead('Access-Control-Allow-Methods', methods.join(',').toUpperCase())
 
     let method = this.request.method.toUpperCase()
@@ -29,14 +39,26 @@ export default class Connection {
   }
 
   public writeHead (key: string, value: string): void {
+    if (this.flush === true) {
+      return
+    }
+
     this.head[key] = value
   }
 
   public setStatus (status: number): void {
+    if (this.flush === true) {
+      return
+    }
+
     this.status = status
   }
 
   public toJson (response: any = {}) {
+    if (this.flush === true) {
+      return
+    }
+
     response = this.arrangeJsonResponse(response)
 
     let body = JSON.stringify({ ...response, status: this.status })
@@ -45,6 +67,7 @@ export default class Connection {
 
     this.response.writeHead(this.status, this.head)
     this.response.end(body)
+    this.flush = true
   }
 
   private arrangeJsonResponse (content: any): ServerResponse {
@@ -68,6 +91,8 @@ export default class Connection {
     switch (this.status) {
       case 200:
         return 'OK'
+      case 401:
+        return 'Unauthorized'
       case 404:
         return 'Not Found'
       case 405:
@@ -75,5 +100,13 @@ export default class Connection {
     }
 
     return 'ok'
+  }
+
+  public destroy () {
+    this.request = undefined
+    this.response = undefined
+    this.head = undefined
+    this.status = undefined
+    this.flush = undefined
   }
 }

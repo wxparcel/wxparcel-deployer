@@ -9,6 +9,10 @@ export interface ChildProcessMap {
   kill: () => void
 }
 
+export interface CommandError extends Error {
+  code?: number
+}
+
 export type ServerMiddle = (connection: Connection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
 export type ServerRouteHandle = (params: any, connection: Connection) => Promise<any>
 export interface ServerResponse {
@@ -55,7 +59,7 @@ export interface ClientCLIOptions {
   version?: string
   message?: string
   folder?: string
-  deployServ?: string
+  server?: string
 }
 
 export type DevToolQRCodeHandle = (qrcode: string) => void

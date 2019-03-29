@@ -5,7 +5,7 @@ import axios, { AxiosInstance } from 'axios'
 import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
 import { spawnPromisify, killToken as genKillToken } from '../share/fns'
-import { Stdout, DevToolQRCodeHandle } from '../types'
+import { Stdout, DevToolQRCodeHandle, CommandError } from '../types'
 
 const responseInterceptors = (response) => {
   const { status, data: message } = response
@@ -19,10 +19,11 @@ const responseInterceptors = (response) => {
 export default class DevTool {
   private options: ServerOptions
   private request: AxiosInstance
-  private command: (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => Promise<any>
+  private watches: Array<{ token: Symbol, kill: () => void }>
 
   constructor (options: ServerOptions) {
     this.options = options
+    this.watches = []
 
     if (this.options.devToolServer) {
       const axiosOptions = {
@@ -33,14 +34,6 @@ export default class DevTool {
       }
 
       this.request = axios.create(axiosOptions)
-
-    } else if (this.options.devToolCli) {
-      this.command = async (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => {
-        const code = await spawnPromisify(this.options.devToolCli, params, options, stdout, killToken)
-        if (code !== 0) {
-          return Promise.reject(new Error(`Command ${params} fail, error code: ${code}`))
-        }
-      }
     }
   }
 
@@ -312,19 +305,27 @@ export default class DevTool {
     }
   }
 
-  private async execute (task: (statsFile: string) => void): Promise<any> {
+  private async execute (task: (statsFile: string) => Promise<any>): Promise<any> {
     const { tempPath, uid } = this.options
     const statsFile = path.join(tempPath, `./stats/${uid}.json`)
     fs.ensureFileSync(statsFile)
 
-    let promise = this.watchFile(statsFile)
-    await task(statsFile)
+    let killToken = genKillToken()
+    let promise = this.watchFile(statsFile, killToken)
+    await task(statsFile).catch((error) => {
+      this.killWather(killToken)
+      return Promise.reject(error)
+    })
 
-    let content = await promise
+    let content = await promise.catch((error) => {
+      this.killWather(killToken)
+      return Promise.reject(error)
+    })
+
     return JSON.parse(content.toString())
   }
 
-  private watchFile (file: string): Promise<Buffer> {
+  private watchFile (file: string, killToken?: Symbol): Promise<Buffer> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not exists`))
     }
@@ -347,6 +348,42 @@ export default class DevTool {
       }
 
       let watcher = fs.watch(file, { persistent: true }, handle)
+      killToken && this.watches.push({ token: killToken, kill: () => watcher.close() })
+
+      let handleProcessSigint = process.exit.bind(process)
+      let handleProcessExit = async () => {
+        watcher && await watcher.close()
+
+        process.removeListener('exit', handleProcessExit)
+        process.removeListener('SIGINT', handleProcessSigint)
+
+        handleProcessExit = undefined
+        handleProcessSigint = undefined
+      }
+
+      process.on('exit', handleProcessExit)
+      process.on('SIGINT', handleProcessSigint)
     })
+  }
+
+  private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) {
+    const { devToolCli } = this.options
+    const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
+
+    if (code !== 0) {
+      let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
+      error.code = code
+
+      return Promise.reject(error)
+    }
+  }
+
+  private killWather (killToken?: Symbol) {
+    let index = this.watches.findIndex(({ token }) => token === killToken)
+
+    if (index !== -1) {
+      this.watches[index].kill()
+      this.watches.splice(index, 1)
+    }
   }
 }

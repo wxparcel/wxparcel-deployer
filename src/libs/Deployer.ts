@@ -11,6 +11,7 @@ import Connection from './Connection'
 import DevTool from './DevTool'
 import stdoutServ from '../services/stdout'
 import { writeFilePromisify } from '../share/fns'
+import { CommandError } from '../types'
 
 export default class Deployer {
   private options: ServerOptions
@@ -64,7 +65,15 @@ export default class Deployer {
 
     log('Start to upload to weixin server')
 
-    await devToolPromise
+    await devToolPromise.catch((error: CommandError) => {
+      if (error.code === 255) {
+        conn.setStatus(401)
+        conn.toJson({ message: 'You don\'t have permission to upload' })
+      }
+
+      return Promise.reject(error)
+    })
+
     let index = this.commandQueue.indexOf(devToolPromise)
     this.commandQueue.splice(index, 1)
 

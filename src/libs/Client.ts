@@ -4,7 +4,7 @@ import { promisify } from 'util'
 import forEach = require('lodash/forEach')
 import commandExists = require('command-exists')
 import Zip = require('jszip')
-import axios, { AxiosInstance } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import FormData = require('form-data')
 import { ClientOptions } from './OptionManager'
 import stdoutServ from '../services/stdout'
@@ -19,11 +19,16 @@ export default class Client {
   constructor (options: ClientOptions) {
     this.options = options
 
-    const axiosOptions = {
-      baseURL: this.options.deployServer
+    let { deployServer } = this.options
+    const axiosOptions: AxiosRequestConfig = {
+      baseURL: /^https?:\/\//.test(deployServer) ? deployServer : `http://${deployServer}`
     }
 
     this.request = axios.create(axiosOptions)
+    this.request.interceptors.response.use(async (response: AxiosResponse) => response, (rejection: AxiosError) => {
+      let { response } = rejection
+      return Promise.reject(response.data)
+    })
   }
 
   public async uploadProject (folder: string, version: string, message: string): Promise<any> {
@@ -109,7 +114,13 @@ export default class Client {
         }
       }
 
-      const result = await this.request.post(serverUrl, formData, config)
+      const result = await this.request.post(serverUrl, formData, config).catch((error) => {
+        let { message } = error
+        stdoutServ.error(message)
+
+        return Promise.reject(error)
+      })
+
       resolve(result)
     })
   }

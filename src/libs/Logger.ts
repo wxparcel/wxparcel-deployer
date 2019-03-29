@@ -56,7 +56,7 @@ export default class Logger {
       return this.trace(message, chalk.red.bind(chalk))
     }
 
-    return this.log(message)
+    return this.log(chalk.red(message))
   }
 
   public warn (message: string | Error): void {
@@ -64,7 +64,7 @@ export default class Logger {
       return this.trace(message, chalk.yellow.bind(chalk))
     }
 
-    return this.log(message)
+    return this.log(chalk.yellow(message))
   }
 
   public trace (message: string | Error, color?: (message: string) => string): void {

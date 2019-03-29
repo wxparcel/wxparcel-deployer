@@ -19,7 +19,7 @@ export const unitSize = (size: number, amount: number = 1024, units: Array<strin
 
 const processes: Array<ChildProcessMap> = []
 
-export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => {
+export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol): Promise<any> => {
   return new Promise((resolve, reject) => {
     let cp = spawn(cli, params || [], options || {})
 

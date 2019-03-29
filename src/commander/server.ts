@@ -1,4 +1,5 @@
 import * as fs from 'fs-extra'
+import * as ip from 'ip'
 import * as program from 'commander'
 import * as portscanner from 'portscanner'
 import chalk from 'chalk'
@@ -12,7 +13,7 @@ import { ServerCLIOptions } from '../types'
 export const server = async (options: ServerCLIOptions = {}) => {
   let { config: configFile, port } = options
   if (!port) {
-    port = await portscanner.findAPortNotInUse(3000, 8000)
+    port = await portscanner.findAPortNotInUse(3000, 8000, ip.address())
   }
 
   let defaultOptions: any = {}
