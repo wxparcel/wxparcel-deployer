@@ -66,9 +66,15 @@ export default class Deployer {
     log('Start to upload to weixin server')
 
     await devToolPromise.catch((error: CommandError) => {
-      if (error.code === 255) {
-        conn.setStatus(401)
-        conn.toJson({ message: 'You don\'t have permission to upload' })
+      switch (error.code) {
+        case 255:
+          conn.setStatus(401)
+          conn.toJson({ message: 'You don\'t have permission to upload' })
+          break
+        case -408:
+          conn.setStatus(408)
+          conn.toJson({ message: 'Upload timeout, please retry' })
+          break
       }
 
       return Promise.reject(error)

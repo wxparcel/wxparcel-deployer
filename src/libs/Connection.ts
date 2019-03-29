@@ -97,6 +97,8 @@ export default class Connection {
         return 'Not Found'
       case 405:
         return 'Method Not Allowed'
+      case 408:
+        return 'Request Timeout'
     }
 
     return 'ok'

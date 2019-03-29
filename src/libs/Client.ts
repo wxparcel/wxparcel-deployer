@@ -27,6 +27,10 @@ export default class Client {
     this.request = axios.create(axiosOptions)
     this.request.interceptors.response.use(async (response: AxiosResponse) => response, (rejection: AxiosError) => {
       let { response } = rejection
+      if (!response) {
+        return Promise.reject(new Error('The request could not be sent, please check the network status or server status'))
+      }
+
       return Promise.reject(response.data)
     })
   }

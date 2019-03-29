@@ -4,7 +4,7 @@ import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
 import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
-import { spawnPromisify, killToken as genKillToken } from '../share/fns'
+import { spawnPromisify, killToken as genKillToken, killProcess } from '../share/fns'
 import { Stdout, DevToolQRCodeHandle, CommandError } from '../types'
 
 const responseInterceptors = (response) => {
@@ -19,11 +19,11 @@ const responseInterceptors = (response) => {
 export default class DevTool {
   private options: ServerOptions
   private request: AxiosInstance
-  private watches: Array<{ token: Symbol, kill: () => void }>
+  private warders: Array<{ token: Symbol, kill: () => void }>
 
   constructor (options: ServerOptions) {
     this.options = options
-    this.watches = []
+    this.warders = []
 
     if (this.options.devToolServer) {
       const axiosOptions = {
@@ -313,12 +313,12 @@ export default class DevTool {
     let killToken = genKillToken()
     let promise = this.watchFile(statsFile, killToken)
     await task(statsFile).catch((error) => {
-      this.killWather(killToken)
+      this.kill(killToken)
       return Promise.reject(error)
     })
 
     let content = await promise.catch((error) => {
-      this.killWather(killToken)
+      this.kill(killToken)
       return Promise.reject(error)
     })
 
@@ -335,6 +335,7 @@ export default class DevTool {
         switch (eventType) {
           case 'change': {
             watcher.close()
+            clearTimeout(timeId)
 
             try {
               let content = fs.readFileSync(file)
@@ -348,7 +349,18 @@ export default class DevTool {
       }
 
       let watcher = fs.watch(file, { persistent: true }, handle)
-      killToken && this.watches.push({ token: killToken, kill: () => watcher.close() })
+
+      let timeout = () => {
+        this.kill(killToken)
+
+        let error = new Error('Timeout') as CommandError
+        error.code = -408
+
+        reject(error)
+      }
+
+      let timeId = setTimeout(timeout, 30e3)
+      killToken && this.warders.push({ token: killToken, kill: () => watcher.close() })
 
       let handleProcessSigint = process.exit.bind(process)
       let handleProcessExit = async () => {
@@ -366,24 +378,43 @@ export default class DevTool {
     })
   }
 
-  private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) {
-    const { devToolCli } = this.options
-    const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
+  private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: Symbol = genKillToken()) {
+    return new Promise(async (resolve, reject) => {
+      const { devToolCli } = this.options
 
-    if (code !== 0) {
-      let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
-      error.code = code
+      let timeout = () => {
+        this.kill(killToken)
 
-      return Promise.reject(error)
-    }
+        let error = new Error('Timeout') as CommandError
+        error.code = -408
+
+        reject(error)
+      }
+
+      let timeId = setTimeout(timeout, 30e3)
+      this.warders.push({ token: killToken, kill: () => killProcess(killToken) })
+
+      const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
+      clearTimeout(timeId)
+
+      if (code !== 0) {
+        let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
+        error.code = code
+
+        reject(error)
+        return
+      }
+
+      resolve(code)
+    })
   }
 
-  private killWather (killToken?: Symbol) {
-    let index = this.watches.findIndex(({ token }) => token === killToken)
+  private kill (killToken?: Symbol) {
+    let index = this.warders.findIndex(({ token }) => token === killToken)
 
     if (index !== -1) {
-      this.watches[index].kill()
-      this.watches.splice(index, 1)
+      this.warders[index].kill()
+      this.warders.splice(index, 1)
     }
   }
 }
