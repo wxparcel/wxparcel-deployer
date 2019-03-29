@@ -7,7 +7,7 @@ import Zip = require('jszip')
 import axios, { AxiosInstance } from 'axios'
 import FormData = require('form-data')
 import { ClientOptions } from './OptionManager'
-import stdout from '../services/stdout'
+import stdoutServ from '../services/stdout'
 import { unitSize, spawnPromisify } from '../share/fns'
 import { validProject, findRootFolder } from '../share/wx'
 import { ClientZipSource } from '../types'
@@ -29,11 +29,12 @@ export default class Client {
   public async uploadProject (folder: string, version: string, message: string): Promise<any> {
     message = message || await this.getGitMessage(folder)
 
+    const { appid, compileType, libVersion, projectname } = await this.getProjectConfig(folder)
     const { uid, releasePath } = this.options
-    const zipFile = path.join(releasePath, `${uid}.zip`)
+    const zipFile = path.join(releasePath, `${appid}.zip`)
 
     await this.compress(folder, zipFile)
-    const response = await this.upload('/upload', zipFile, { uid, version, message })
+    const response = await this.upload('/upload', zipFile, { uid, appid, version, message, compileType, libVersion, projectname: decodeURIComponent(projectname) })
 
     fs.removeSync(zipFile)
     return response
@@ -104,7 +105,7 @@ export default class Client {
         headers,
         onUploadProgress (event) {
           const { loaded, total } = event
-          stdout.loading(loaded, total, 'Upload file')
+          stdoutServ.loading(loaded, total, 'Upload file')
         }
       }
 
@@ -133,6 +134,11 @@ export default class Client {
     })
 
     return message
+  }
+
+  private async getProjectConfig (folder: string): Promise<any> {
+    let file = path.join(folder, 'project.config.json')
+    return promisify(fs.readJSON.bind(fs))(file)
   }
 
   private findFiles (file: string, relativeTo: string) {

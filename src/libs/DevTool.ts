@@ -4,7 +4,7 @@ import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
 import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
-import { spawnPromisify } from '../share/fns'
+import { spawnPromisify, killToken as genKillToken } from '../share/fns'
 import { Stdout, DevToolQRCodeHandle } from '../types'
 
 const responseInterceptors = (response) => {
@@ -19,7 +19,7 @@ const responseInterceptors = (response) => {
 export default class DevTool {
   private options: ServerOptions
   private request: AxiosInstance
-  private command: (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout) => Promise<any>
+  private command: (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => Promise<any>
 
   constructor (options: ServerOptions) {
     this.options = options
@@ -35,12 +35,39 @@ export default class DevTool {
       this.request = axios.create(axiosOptions)
 
     } else if (this.options.devToolCli) {
-      this.command = async (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout) => {
-        const code = await spawnPromisify(this.options.devToolCli, params, options, stdout)
+      this.command = async (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => {
+        const code = await spawnPromisify(this.options.devToolCli, params, options, stdout, killToken)
         if (code !== 0) {
           return Promise.reject(new Error(`Command ${params} fail, error code: ${code}`))
         }
       }
+    }
+  }
+
+  /**
+   * 打开工具或指定项目
+   *
+   * @param folder 项目文件夹
+   */
+  public async open (folder: string): Promise<any> {
+    const valid = validProject(folder)
+    if (valid !== true) {
+      return Promise.reject(valid)
+    }
+
+    if (this.request) {
+      const params = {
+        projectpath: encodeURIComponent(folder)
+      }
+
+      await this.request.get('/open', { params })
+
+    } else if (this.command) {
+      const params = [
+        '--open', folder
+      ]
+
+      await this.command(params)
     }
   }
 
@@ -77,14 +104,14 @@ export default class DevTool {
           '--login-result-output', `${statsFile}`
         ]
 
-        await this.command(params)
+        await this.command(params, null, null)
 
         let qrcode = fs.readFileSync(qrcodeFile).toString()
         qrcodeCallback(qrcode)
       }
     }
 
-    const response = await this.execTask(task)
+    const response = await this.execute(task)
     if (response.status !== 'SUCCESS') {
       return Promise.reject(new Error(response.error))
     }
@@ -110,7 +137,7 @@ export default class DevTool {
 
         const params = {
           format: 'base64',
-          projectpath: folder,
+          projectpath: encodeURIComponent(folder),
           infooutput: statsFile,
           compilecondition: {
             pathName: pages[0]
@@ -141,7 +168,7 @@ export default class DevTool {
       }
     }
 
-    return this.execTask(task)
+    return this.execute(task)
   }
 
   /**
@@ -160,7 +187,7 @@ export default class DevTool {
 
       if (this.request) {
         const params = {
-          projectpath: folder,
+          projectpath: encodeURIComponent(folder),
           version: version,
           desc: description,
           infooutput: statsFile
@@ -179,7 +206,34 @@ export default class DevTool {
       }
     }
 
-    return this.execTask(task)
+    return this.execute(task)
+  }
+
+  /**
+   * 自动化测试
+   *
+   * @param folder 项目文件夹
+   */
+  public async test (folder: string): Promise<any> {
+    const valid = validProject(folder)
+    if (valid !== true) {
+      return Promise.reject(valid)
+    }
+
+    if (this.request) {
+      const params = {
+        projectpath: encodeURIComponent(folder)
+      }
+
+      await this.request.get('/test', { params })
+
+    } else if (this.command) {
+      const params = [
+        '--test', folder
+      ]
+
+      await this.command(params)
+    }
   }
 
   /**
@@ -196,7 +250,7 @@ export default class DevTool {
 
       if (this.request) {
         const params = {
-          projectpath: folder,
+          projectpath: encodeURIComponent(folder),
           infooutput: statsFile
         }
 
@@ -212,23 +266,77 @@ export default class DevTool {
       }
     }
 
-    return this.execTask(task)
+    return this.execute(task)
   }
 
-  private async execTask (task: (statsFile: string) => void): Promise<any> {
+  /**
+   * 关闭当前项目窗口
+   *
+   * @param folder 项目文件夹
+   */
+  public async close (folder: string): Promise<any> {
+    const valid = validProject(folder)
+    if (valid !== true) {
+      return Promise.reject(valid)
+    }
+
+    if (this.request) {
+      const params = {
+        projectpath: encodeURIComponent(folder)
+      }
+
+      await this.request.get('/close', { params })
+
+    } else if (this.command) {
+      const params = [
+        '--close', folder
+      ]
+
+      await this.command(params)
+    }
+  }
+
+  /**
+   * 关闭开发者工具
+   */
+  public async quit (): Promise<any> {
+    if (this.request) {
+      await this.request.get('/quit')
+
+    } else if (this.command) {
+      const params = [
+        '--quit'
+      ]
+
+      await this.command(params)
+    }
+  }
+
+  private async execute (task: (statsFile: string) => void): Promise<any> {
     const { tempPath, uid } = this.options
     const statsFile = path.join(tempPath, `./stats/${uid}.json`)
     fs.ensureFileSync(statsFile)
 
-    return new Promise(async (resolve, reject) => {
-      let watchFile = (eventType: string) => {
+    let promise = this.watchFile(statsFile)
+    await task(statsFile)
+
+    let content = await promise
+    return JSON.parse(content.toString())
+  }
+
+  private watchFile (file: string): Promise<Buffer> {
+    if (!fs.existsSync(file)) {
+      return Promise.reject(new Error(`File ${file} is not exists`))
+    }
+
+    return new Promise((resolve, reject) => {
+      let handle = function handle (eventType: string) {
         switch (eventType) {
           case 'change': {
             watcher.close()
 
             try {
-              let content = fs.readJSONSync(statsFile)
-              fs.removeSync(statsFile)
+              let content = fs.readFileSync(file)
               resolve(content)
 
             } catch (error) {
@@ -238,8 +346,7 @@ export default class DevTool {
         }
       }
 
-      let watcher = fs.watch(statsFile, { persistent: true }, watchFile)
-      await task(statsFile)
+      let watcher = fs.watch(file, { persistent: true }, handle)
     })
   }
 }

@@ -7,23 +7,23 @@ export class StdoutService extends EventEmitter {
   }
 
   public ok (message: string): void {
-    return this.trace(`${chalk.green.bold('[OK]')} ${message}`)
+    return this.log(`${chalk.green.bold('[OK]')} ${message}`)
   }
 
   public info (message: string): void {
-    return this.trace(`${chalk.blue.bold('[INFO]')} ${message}`)
+    return this.log(`${chalk.blue.bold('[INFO]')} ${message}`)
   }
 
-  public trace (message: string): void {
-    this.emit('trace', message)
-  }
-
-  public warn (message: string | Error): void {
-    this.emit('warn', message)
+  public warn (message: string): void {
+    return this.log(`${chalk.yellow.bold('[WARN]')} ${message}`)
   }
 
   public error (message: string | Error): void {
     this.emit('error', message)
+  }
+
+  public log (message: string): void {
+    this.emit('log', message)
   }
 
   public clear (isSoft: boolean = true): void {

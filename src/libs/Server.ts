@@ -1,14 +1,16 @@
 import * as http from 'http'
 import pathToRegexp = require('path-to-regexp')
 import Connection from './Connection'
+import chalk from 'chalk'
+import stdoutServ from '../services/stdout'
 import { ServerMiddle, ServerRouteHandle } from '../types'
 
 export default class Server {
-  private middlewares: Array<ServerMiddle>
+  private routes: Array<ServerMiddle>
   private server: http.Server
 
   constructor () {
-    this.middlewares = []
+    this.routes = []
 
     this.server = http.createServer(async (request, response) => {
       if (request.url === '/favicon.ico') {
@@ -18,8 +20,18 @@ export default class Server {
       const connection = new Connection(request, response)
 
       try {
-        await this.waterfall(this.middlewares)(connection, request, response)
-        response.end()
+        const hit = await this.waterfall(this.routes)(connection, request, response)
+
+        if (hit !== true) {
+          const { method, url } = request
+          const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
+          stdoutServ.warn(`[${chalk.gray('MISS')}][${chalk.green(method.toUpperCase())}] ${url} ${datetime}`)
+
+          connection.setStatus(404)
+          connection.toJson()
+        }
+
+        response.finished || response.end()
 
       } catch (error) {
         connection.setCros()
@@ -30,15 +42,19 @@ export default class Server {
   }
 
   public route (methods: string | Array<string>, route: string, handle: ServerRouteHandle): void {
-    return this.use(async (connection: Connection, clientRequest) => {
+    methods = methods || 'GET'
+    methods = Array.isArray(methods) ? methods : [methods]
+
+    const router = async (connection: Connection, clientRequest) => {
+      const { url, method } = clientRequest
       const regexp = pathToRegexp(route)
-      const params = regexp.exec(clientRequest.url)
+      const params = regexp.exec(url)
 
       if (params) {
-        methods = methods || 'GET'
-        methods = Array.isArray(methods) ? methods : [methods]
+        const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
+        stdoutServ.info(`[${chalk.gray('HIT')}][${chalk.green(method.toUpperCase())}] ${url} ${chalk.gray(datetime)}`)
 
-        connection.setMethods(methods)
+        connection.setMethods(methods as Array<string>)
         connection.setCros()
 
         if (connection.status !== 200) {
@@ -46,14 +62,20 @@ export default class Server {
           return true
         }
 
-        await handle(params, connection)
+        try {
+          await handle(params, connection)
+
+        } catch (error) {
+          stdoutServ.error(error)
+          connection.setStatus(500)
+          connection.toJson({ message: error.message })
+        }
+
         return true
       }
-    })
-  }
+    }
 
-  public use (middleware: ServerMiddle): void {
-    this.middlewares.push(middleware)
+    this.routes.push(router)
   }
 
   public listen (...args): void {
@@ -72,22 +94,30 @@ export default class Server {
     this.server.close()
   }
 
-  private waterfall (middlewares: Array<ServerMiddle>) {
+  private waterfall (middlewares: Array<ServerMiddle>): (connection: Connection, request: http.IncomingMessage, response: http.ServerResponse) => Promise<boolean> {
     middlewares = [].concat(middlewares)
 
-    return function waterfall (connection: Connection, request: http.IncomingMessage, response: http.ServerResponse) {
+    return function waterfall (connection: Connection, request: http.IncomingMessage, response: http.ServerResponse): Promise<boolean> {
       if (middlewares.length === 0) {
-        return Promise.resolve()
+        return Promise.resolve(false)
       }
 
       let middleware = middlewares.shift()
       return middleware(connection, request, response).then((isBreak: boolean) => {
         if (isBreak === true) {
-          return Promise.resolve()
+          return Promise.resolve(true)
         }
 
         return waterfall(connection, request, response)
       })
     }
+  }
+
+  public destory () {
+    this.routes.splice(0)
+    this.server.close()
+
+    this.routes = null
+    this.server = null
   }
 }
