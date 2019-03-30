@@ -1,7 +1,7 @@
 import { IncomingMessage, ServerResponse as HttpServerResponse } from 'http'
 import defaultsDeep = require('lodash/defaultsDeep')
 import pick = require('lodash/pick')
-import { ServerResponse } from '../types'
+import { ServerResponse } from '../typings'
 
 export default class Connection {
   public request: IncomingMessage

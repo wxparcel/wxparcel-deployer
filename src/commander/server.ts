@@ -1,14 +1,14 @@
-import * as fs from 'fs-extra'
-import * as ip from 'ip'
-import * as program from 'commander'
-import * as portscanner from 'portscanner'
+import fs = require('fs-extra')
+import ip = require('ip')
+import program = require('commander')
+import portscanner = require('portscanner')
 import chalk from 'chalk'
 import { ServerOptions } from '../libs/OptionManager'
 import Deployer from '../libs/Deployer'
 import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
 import * as pkg from '../../package.json'
-import { ServerCLIOptions } from '../types'
+import { ServerCLIOptions } from '../typings'
 
 export const server = async (options: ServerCLIOptions = {}) => {
   let { config: configFile, port } = options
@@ -43,13 +43,13 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const deployer = new Deployer(globalOptions)
   await deployer.start()
 
-  stdoutServ.clear()
+  // stdoutServ.clear()
   stdoutServ.log(chalk.gray.bold('WXParcel Deployer Server'))
   stdoutServ.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   stdoutServ.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
   globalOptions.devToolCli && stdoutServ.log(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
   globalOptions.devToolServer && stdoutServ.log(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
-  stdoutServ.log(chalk.blue('Deploy server is running, please make sure wx devtool has been logined.'))
+  stdoutServ.log(chalk.magenta('Deploy server is running, please make sure wx devtool has been logined.'))
 
   let handleProcessSigint = process.exit.bind(process)
   let handleProcessExit = async () => {

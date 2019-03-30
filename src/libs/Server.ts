@@ -1,17 +1,17 @@
-import * as http from 'http'
+import http = require('http')
 import pathToRegexp = require('path-to-regexp')
-import Connection from './Connection'
 import chalk from 'chalk'
+import Connection from './Connection'
 import stdoutServ from '../services/stdout'
-import { ServerMiddle, ServerRouteHandle } from '../types'
+import { ServerMiddle, ServerRouteHandle } from '../typings'
 
 export default class Server {
   private routes: Array<ServerMiddle>
+  private middlewares: Array<ServerMiddle>
   private server: http.Server
 
   constructor () {
     this.routes = []
-
     this.server = http.createServer(async (request, response) => {
       if (request.url === '/favicon.ico') {
         return
@@ -20,6 +20,7 @@ export default class Server {
       const connection = new Connection(request, response)
 
       try {
+        await this.waterfall(this.middlewares)(connection, request, response)
         const hit = await this.waterfall(this.routes)(connection, request, response)
 
         if (hit !== true) {
@@ -79,6 +80,10 @@ export default class Server {
     }
 
     this.routes.push(router)
+  }
+
+  public use (middleware: ServerMiddle) {
+    this.middlewares.push(middleware)
   }
 
   public listen (...args): void {

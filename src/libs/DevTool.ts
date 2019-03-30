@@ -1,11 +1,11 @@
-import * as path from 'path'
-import * as fs from 'fs-extra'
+import fs = require('fs-extra')
+import path = require('path')
 import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
 import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
 import { spawnPromisify, killToken as genKillToken, killProcess } from '../share/fns'
-import { Stdout, DevToolQRCodeHandle, CommandError } from '../types'
+import { Stdout, DevToolQRCodeHandle, CommandError } from '../typings'
 
 const responseInterceptors = (response) => {
   const { status, data: message } = response
@@ -380,32 +380,33 @@ export default class DevTool {
 
   private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: Symbol = genKillToken()) {
     return new Promise(async (resolve, reject) => {
-      const { devToolCli } = this.options
+      console.log('fuck')
+      // const { devToolCli } = this.options
 
-      let timeout = () => {
-        this.kill(killToken)
+      // let timeout = () => {
+      //   this.kill(killToken)
 
-        let error = new Error('Timeout') as CommandError
-        error.code = -408
+      //   let error = new Error('Timeout') as CommandError
+      //   error.code = -408
 
-        reject(error)
-      }
+      //   reject(error)
+      // }
 
-      let timeId = setTimeout(timeout, 30e3)
-      this.warders.push({ token: killToken, kill: () => killProcess(killToken) })
+      // let timeId = setTimeout(timeout, 30e3)
+      // this.warders.push({ token: killToken, kill: () => killProcess(killToken) })
 
-      const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
-      clearTimeout(timeId)
+      // const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
+      // clearTimeout(timeId)
 
-      if (code !== 0) {
-        let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
-        error.code = code
+      // if (code !== 0) {
+      //   let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
+      //   error.code = code
 
-        reject(error)
-        return
-      }
+      //   reject(error)
+      //   return
+      // }
 
-      resolve(code)
+      resolve(0)
     })
   }
 

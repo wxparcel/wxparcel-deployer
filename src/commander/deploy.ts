@@ -1,12 +1,12 @@
-import * as fs from 'fs-extra'
-import * as path from 'path'
-import * as program from 'commander'
+import fs = require('fs-extra')
+import path = require('path')
+import program = require('commander')
 import chalk from 'chalk'
 import { ClientOptions } from '../libs/OptionManager'
 import Client from '../libs/Client'
 import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
-import { ClientCLIOptions } from '../types'
+import { ClientCLIOptions } from '../typings'
 
 export const deploy = async (options: ClientCLIOptions = {}) => {
   let { config: configFile, version, message } = options

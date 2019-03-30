@@ -1,10 +1,10 @@
-import * as os from 'os'
-import * as fs from 'fs-extra'
-import * as path from 'path'
-import * as shortid from 'shortid'
-import * as ip from 'ip'
+import os = require('os')
+import fs = require('fs-extra')
+import path = require('path')
+import shortid = require('shortid')
+import ip = require('ip')
 import trimEnd = require('lodash/trimEnd')
-import { LogTypes, BaseOptions, ServerBaseOptions, ClientBaseOptions } from '../types'
+import { LogTypes, BaseOptions, ServerBaseOptions, ClientBaseOptions } from '../typings'
 
 export class OptionManager {
   public uid: string

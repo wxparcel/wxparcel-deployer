@@ -1,5 +1,5 @@
-import * as fs from 'fs-extra'
-import * as path from 'path'
+import fs = require('fs-extra')
+import path = require('path')
 import { IncomingMessage } from 'http'
 import chalk from 'chalk'
 import { IncomingForm } from 'formidable'
@@ -11,7 +11,7 @@ import Connection from './Connection'
 import DevTool from './DevTool'
 import stdoutServ from '../services/stdout'
 import { writeFilePromisify } from '../share/fns'
-import { CommandError } from '../types'
+import { CommandError } from '../typings'
 
 export default class Deployer {
   private options: ServerOptions

@@ -1,8 +1,7 @@
 import chalk from 'chalk'
-import forEach = require('lodash/forEach')
 import PrettyError = require('pretty-error')
 import { Bar } from 'cli-progress'
-import { LogTypes, LoggerOptions } from '../types'
+import { LogTypes, LoggerOptions } from '../typings'
 
 export default class Logger {
   private type: keyof typeof LogTypes | Array<keyof typeof LogTypes>

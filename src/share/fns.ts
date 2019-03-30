@@ -1,7 +1,7 @@
-import * as fs from 'fs-extra'
+import fs = require('fs-extra')
 import { promisify } from 'util'
 import { spawn, SpawnOptions } from 'child_process'
-import { Stdout, ChildProcessMap } from '../types'
+import { Stdout, ChildProcessMap } from '../typings'
 
 export const writeFilePromisify = promisify(fs.writeFile.bind(fs))
 

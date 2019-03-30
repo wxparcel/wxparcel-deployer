@@ -1,5 +1,4 @@
 import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
-import { ChildProcess } from 'child_process'
 import Connection from './libs/Connection'
 
 export type Stdout = (data: Buffer, type?: string) => void

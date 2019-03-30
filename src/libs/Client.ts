@@ -1,5 +1,5 @@
-import * as fs from 'fs-extra'
-import * as path from 'path'
+import fs = require('fs-extra')
+import path = require('path')
 import { promisify } from 'util'
 import forEach = require('lodash/forEach')
 import commandExists = require('command-exists')
@@ -10,7 +10,7 @@ import { ClientOptions } from './OptionManager'
 import stdoutServ from '../services/stdout'
 import { unitSize, spawnPromisify } from '../share/fns'
 import { validProject, findRootFolder } from '../share/wx'
-import { ClientZipSource } from '../types'
+import { ClientZipSource } from '../typings'
 
 export default class Client {
   private options: ClientOptions
