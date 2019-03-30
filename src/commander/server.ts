@@ -43,7 +43,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const deployer = new Deployer(globalOptions)
   await deployer.start()
 
-  // stdoutServ.clear()
+  stdoutServ.clear()
   stdoutServ.log(chalk.gray.bold('WXParcel Deployer Server'))
   stdoutServ.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   stdoutServ.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
@@ -52,8 +52,8 @@ export const server = async (options: ServerCLIOptions = {}) => {
   stdoutServ.log(chalk.magenta('Deploy server is running, please make sure wx devtool has been logined.'))
 
   let handleProcessSigint = process.exit.bind(process)
-  let handleProcessExit = async () => {
-    deployer && await deployer.destory()
+  let handleProcessExit = () => {
+    deployer && deployer.destory()
 
     process.removeListener('exit', handleProcessExit)
     process.removeListener('SIGINT', handleProcessSigint)

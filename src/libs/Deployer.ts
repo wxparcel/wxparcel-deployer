@@ -151,10 +151,10 @@ export default class Deployer {
     }
   }
 
-  public async destory (): Promise<void> {
+  public destory (): void {
     this.server.destory()
     this.commandQueue.splice(0)
-    await this.devTool.quit()
+    this.devTool.destory()
 
     this.options = null
     this.devTool = null

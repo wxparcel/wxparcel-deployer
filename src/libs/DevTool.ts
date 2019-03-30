@@ -380,31 +380,30 @@ export default class DevTool {
 
   private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: Symbol = genKillToken()) {
     return new Promise(async (resolve, reject) => {
-      console.log('fuck')
-      // const { devToolCli } = this.options
+      const { devToolCli } = this.options
 
-      // let timeout = () => {
-      //   this.kill(killToken)
+      let timeout = () => {
+        this.kill(killToken)
 
-      //   let error = new Error('Timeout') as CommandError
-      //   error.code = -408
+        let error = new Error('Timeout') as CommandError
+        error.code = -408
 
-      //   reject(error)
-      // }
+        reject(error)
+      }
 
-      // let timeId = setTimeout(timeout, 30e3)
-      // this.warders.push({ token: killToken, kill: () => killProcess(killToken) })
+      let timeId = setTimeout(timeout, 30e3)
+      this.warders.push({ token: killToken, kill: () => killProcess(killToken) })
 
-      // const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
-      // clearTimeout(timeId)
+      const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
+      clearTimeout(timeId)
 
-      // if (code !== 0) {
-      //   let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
-      //   error.code = code
+      if (code !== 0) {
+        let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
+        error.code = code
 
-      //   reject(error)
-      //   return
-      // }
+        reject(error)
+        return
+      }
 
       resolve(0)
     })
@@ -417,5 +416,14 @@ export default class DevTool {
       this.warders[index].kill()
       this.warders.splice(index, 1)
     }
+  }
+
+  public destory () {
+    let warders = this.warders.splice(0)
+    warders.forEach((warder) => warder.kill())
+
+    this.options = undefined
+    this.request = undefined
+    this.warders = undefined
   }
 }
