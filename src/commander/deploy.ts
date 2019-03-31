@@ -2,9 +2,9 @@ import fs = require('fs-extra')
 import path = require('path')
 import program = require('commander')
 import chalk from 'chalk'
-import { ClientOptions } from '../libs/OptionManager'
-import Client from '../libs/Client'
 import Logger from '../libs/Logger'
+import { ClientOptions } from '../libs/OptionManager'
+import HttpClient from '../clients/Http'
 import stdoutServ from '../services/stdout'
 import { ClientCLIOptions } from '../typings'
 
@@ -43,7 +43,7 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
   }
 
   const folder = options.folder || globalOptions.rootPath
-  const client = new Client(globalOptions)
+  const client = new HttpClient(globalOptions)
 
   stdoutServ.clear()
   stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)

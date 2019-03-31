@@ -1,16 +1,16 @@
-import { IncomingMessage, ServerResponse as HttpServerResponse } from 'http'
+import { IncomingMessage, ServerResponse } from 'http'
 import defaultsDeep = require('lodash/defaultsDeep')
 import pick = require('lodash/pick')
-import { ServerResponse } from '../typings'
+import { HttpServerResponse } from '../typings'
 
-export default class Connection {
+export default class HttpConnection {
   public request: IncomingMessage
-  public response: HttpServerResponse
+  public response: ServerResponse
   public head: { [key: string]: string }
   public status: number
   public flush: boolean
 
-  constructor (request: IncomingMessage, response: HttpServerResponse) {
+  constructor (request: IncomingMessage, response: ServerResponse) {
     this.request = request
     this.response = response
 
@@ -70,7 +70,7 @@ export default class Connection {
     this.flush = true
   }
 
-  private arrangeJsonResponse (content: any): ServerResponse {
+  private arrangeJsonResponse (content: any): HttpServerResponse {
     let response = this.genJsonResponse()
     let keys = Object.keys(response)
     content = pick(content, keys)
@@ -78,7 +78,7 @@ export default class Connection {
     return defaultsDeep(content, response)
   }
 
-  private genJsonResponse (): ServerResponse {
+  private genJsonResponse (): HttpServerResponse {
     let status = this.status
     let code = 0
     let data = null

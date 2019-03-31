@@ -1,5 +1,5 @@
 import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
-import Connection from './libs/Connection'
+import HttpConnection from './libs/HttpConnection'
 
 export type Stdout = (data: Buffer, type?: string) => void
 
@@ -12,14 +12,20 @@ export interface CommandError extends Error {
   code?: number
 }
 
-export type ServerMiddle = (connection: Connection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
-export type ServerRouteHandle = (params: any, connection: Connection) => Promise<any>
-export interface ServerResponse {
+// http server
+// -----------------
+
+export type HTTPServerRoute = (connection: HttpConnection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
+export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
+export interface HttpServerResponse {
   status: number
   code: number
   data: any
   message: string
 }
+
+// logger
+// -----------------
 
 export enum LogTypes {
   console
@@ -61,7 +67,7 @@ export interface ClientCLIOptions {
   server?: string
 }
 
-export type DevToolQRCodeHandle = (qrcode: string) => void
+export type DevToolQRCodeHandle = (qrcode: string | Buffer) => void
 
 export interface ClientZipSource {
   file: string

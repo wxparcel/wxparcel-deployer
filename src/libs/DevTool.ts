@@ -70,38 +70,20 @@ export default class DevTool {
    * @param qrcodeCallback 二维码处理回调
    */
   public async login (qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
-    const task = async (statsFile) => {
-      if (this.request) {
-        const params = {
-          format: 'base64',
-          resultoutput: statsFile
-        }
+    const { uid, qrcodePath } = this.options
+    const qrcodeFile = path.join(qrcodePath, uid)
 
-        const response = await this.request.get('/login', { params })
-        const { data: qrcode } = response
-        if (!/^data:image\/jpeg;base64/.test(qrcode)) {
-          return Promise.reject(new Error('QRcode is not a base64 data'))
-        }
+    fs.ensureFileSync(qrcodeFile)
+    this.watchFile(qrcodeFile).then((qrcode: Buffer) => qrcodeCallback(qrcode))
 
-        qrcodeCallback(qrcode)
+    const task = (statsFile: string, killToken: symbol) => {
+      const params = [
+        '--login',
+        '--login-qr-output', `base64@${qrcodeFile}`,
+        '--login-result-output', `${statsFile}`
+      ]
 
-      } else if (this.command) {
-        const { uid, qrcodePath } = this.options
-        const qrcodeFile = path.join(qrcodePath, uid)
-
-        fs.ensureDirSync(qrcodePath)
-
-        const params = [
-          '--login',
-          '--login-qr-output', `base64@${qrcodeFile}`,
-          '--login-result-output', `${statsFile}`
-        ]
-
-        await this.command(params, null, null)
-
-        let qrcode = fs.readFileSync(qrcodeFile).toString()
-        qrcodeCallback(qrcode)
-      }
+      return this.command(params, null, null, killToken)
     }
 
     const response = await this.execute(task)
@@ -110,6 +92,48 @@ export default class DevTool {
     }
 
     return response
+
+    // const task = async (statsFile: string, killToken: symbol) => {
+    //   if (this.request) {
+    //     const params = {
+    //       format: 'base64',
+    //       resultoutput: statsFile
+    //     }
+
+    //     const response = await this.request.get('/login', { params })
+    //     const { data: qrcode } = response
+    //     if (!/^data:image\/jpeg;base64/.test(qrcode)) {
+    //       return Promise.reject(new Error('QRcode is not a base64 data'))
+    //     }
+
+    //     qrcodeCallback(qrcode)
+
+    //   } else {
+    //     const { uid, qrcodePath } = this.options
+    //     const qrcodeFile = path.join(qrcodePath, uid)
+
+    //     fs.ensureDirSync(qrcodePath)
+
+    //     const params = [
+    //       '--login',
+    //       '--login-qr-output', `base64@${qrcodeFile}`,
+    //       '--login-result-output', `${statsFile}`
+    //     ]
+
+    //     let promise = this.command(params, null, null, killToken)
+    //     let qrcode = fs.readFileSync(qrcodeFile).toString()
+    //     qrcodeCallback(qrcode)
+
+    //     await promise
+    //   }
+    // }
+
+    // const response = await this.execute(task)
+    // if (response.status !== 'SUCCESS') {
+    //   return Promise.reject(new Error(response.error))
+    // }
+
+    // return response
   }
 
   /**
@@ -305,7 +329,7 @@ export default class DevTool {
     }
   }
 
-  private async execute (task: (statsFile: string) => Promise<any>): Promise<any> {
+  private async exeddcute (task: (statsFile: string) => Promise<any>): Promise<any> {
     const { tempPath, uid } = this.options
     const statsFile = path.join(tempPath, `./stats/${uid}.json`)
     fs.ensureFileSync(statsFile)
@@ -325,17 +349,44 @@ export default class DevTool {
     return JSON.parse(content.toString())
   }
 
-  private watchFile (file: string, killToken?: Symbol): Promise<Buffer> {
+  public destory () {
+    let warders = this.warders.splice(0)
+    warders.forEach((warder) => warder.kill())
+
+    this.options = undefined
+    this.request = undefined
+    this.warders = undefined
+  }
+
+  private async execute (task: (statsFile: string, killToken: symbol) => Promise<any>) {
+    const { tempPath, uid } = this.options
+
+    let statsFile = path.join(tempPath, `./stats/${uid}.json`)
+    fs.ensureFileSync(statsFile)
+
+    let killToken = genKillToken()
+    let catchError = (error) => {
+      this.kill(killToken)
+      return Promise.reject(error)
+    }
+
+    let statsPromise = this.watchFile(statsFile, killToken)
+    let excePromise = task(statsFile, killToken)
+    let [content] = await Promise.all([statsPromise, excePromise]).catch(catchError)
+    return JSON.parse(content.toString())
+  }
+
+  private watchFile (file: string, killToken: symbol = genKillToken()): Promise<Buffer> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not exists`))
     }
 
-    return new Promise((resolve, reject) => {
-      let handle = function handle (eventType: string) {
+    let watcher
+    let promise: Promise<Buffer> = new Promise((resolve, reject) => {
+      let handle = (eventType: string) => {
         switch (eventType) {
           case 'change': {
             watcher.close()
-            clearTimeout(timeId)
 
             try {
               let content = fs.readFileSync(file)
@@ -348,9 +399,27 @@ export default class DevTool {
         }
       }
 
-      let watcher = fs.watch(file, { persistent: true }, handle)
+      watcher = fs.watch(file, { persistent: true }, handle)
+    })
 
-      let timeout = () => {
+    let kill = () => watcher && watcher.close()
+    this.setTimeout(promise, killToken, kill)
+
+    return promise
+  }
+
+  private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: symbol = genKillToken()): Promise<any> {
+    const { devToolCli } = this.options
+
+    let promise = this.spawn(devToolCli, params, options, stdout, killToken)
+    let kill = () => killProcess(killToken)
+
+    return this.setTimeout(promise, killToken, kill)
+  }
+
+  private async setTimeout (promise: Promise<any>, killToken: symbol, kill: () => void, timeout: number = 30e3): Promise<any> {
+    return new Promise(async (resolve, reject) => {
+      let timer = () => {
         this.kill(killToken)
 
         let error = new Error('Timeout') as CommandError
@@ -359,54 +428,26 @@ export default class DevTool {
         reject(error)
       }
 
-      let timeId = setTimeout(timeout, 30e3)
-      killToken && this.warders.push({ token: killToken, kill: () => watcher.close() })
+      let timeId = setTimeout(timer, timeout)
+      this.warders.push({ token: killToken, kill })
 
-      let handleProcessSigint = process.exit.bind(process)
-      let handleProcessExit = async () => {
-        watcher && await watcher.close()
-
-        process.removeListener('exit', handleProcessExit)
-        process.removeListener('SIGINT', handleProcessSigint)
-
-        handleProcessExit = undefined
-        handleProcessSigint = undefined
-      }
-
-      process.on('exit', handleProcessExit)
-      process.on('SIGINT', handleProcessSigint)
+      let response = await promise
+      clearTimeout(timeId)
+      resolve(response)
     })
   }
 
-  private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: Symbol = genKillToken()) {
-    return new Promise(async (resolve, reject) => {
-      const { devToolCli } = this.options
+  private async spawn (command?: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: symbol): Promise<any> {
+    const code = await spawnPromisify(command, params, options, stdout, killToken)
 
-      let timeout = () => {
-        this.kill(killToken)
+    if (code !== 0) {
+      let error = new Error(`Command ${command} ${params.join(' ')} fail, error code: ${code}`) as CommandError
+      error.code = code
 
-        let error = new Error('Timeout') as CommandError
-        error.code = -408
+      return Promise.reject(error)
+    }
 
-        reject(error)
-      }
-
-      let timeId = setTimeout(timeout, 30e3)
-      this.warders.push({ token: killToken, kill: () => killProcess(killToken) })
-
-      const code = await spawnPromisify(devToolCli, params, options, stdout, killToken)
-      clearTimeout(timeId)
-
-      if (code !== 0) {
-        let error = new Error(`Command ${params} fail, error code: ${code}`) as CommandError
-        error.code = code
-
-        reject(error)
-        return
-      }
-
-      resolve(0)
-    })
+    return code
   }
 
   private kill (killToken?: Symbol) {
@@ -416,14 +457,5 @@ export default class DevTool {
       this.warders[index].kill()
       this.warders.splice(index, 1)
     }
-  }
-
-  public destory () {
-    let warders = this.warders.splice(0)
-    warders.forEach((warder) => warder.kill())
-
-    this.options = undefined
-    this.request = undefined
-    this.warders = undefined
   }
 }

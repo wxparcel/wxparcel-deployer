@@ -1,27 +1,25 @@
-import fs = require('fs-extra')
 import path = require('path')
-import { IncomingMessage } from 'http'
 import chalk from 'chalk'
 import { IncomingForm } from 'formidable'
 import forEach = require('lodash/forEach')
-import Zip = require('jszip')
-import { ServerOptions } from './OptionManager'
-import Server from './Server'
-import Connection from './Connection'
-import DevTool from './DevTool'
-import stdoutServ from '../services/stdout'
-import { writeFilePromisify } from '../share/fns'
+import { ServerOptions } from '../libs/OptionManager'
+import DevTool from '../libs/DevTool'
+import Connection from '../libs/HttpConnection'
+import Server from '../libs/HttpServer'
+import { ensureDirs, removeFiles, unzip } from '../share/fns'
+import Base from './Base'
+import { IncomingMessage } from 'http'
 import { CommandError } from '../typings'
 
-export default class Deployer {
+export default class Http extends Base {
   private options: ServerOptions
   private devTool: DevTool
   private server: Server
-  private commandQueue: Array<Promise<any>>
 
   constructor (options: ServerOptions) {
+    super()
+
     this.options = options
-    this.commandQueue = []
   }
 
   public start (): Promise<void> {
@@ -36,14 +34,14 @@ export default class Deployer {
     })
   }
 
-  private async status (params: RegExpExecArray, conn: Connection): Promise<void> {
+  public async status (_: RegExpExecArray, conn: Connection): Promise<void> {
     conn.toJson({ message: 'okaya, server is running.' })
   }
 
-  private async upload (params: RegExpExecArray, conn: Connection): Promise<void> {
+  public async upload (_: RegExpExecArray, conn: Connection): Promise<void> {
     const { request } = conn
     const { uploadPath, deployPath } = this.options
-    await this.ensureDirs(uploadPath, deployPath)
+    await ensureDirs(uploadPath, deployPath)
 
     const { file: uploadFile, uid, appid, version, message, compileType, libVersion, projectname } = await this.transfer(request)
     const log = this.logger(uid)
@@ -52,20 +50,19 @@ export default class Deployer {
 
     const uploadFileName = appid || uid || path.basename(uploadFile).replace(path.extname(uploadFile), '')
     const projFolder = path.join(deployPath, uploadFileName)
-    const unzipPromises = await this.unzip(uploadFile, projFolder)
+    const unzipPromises = await unzip(uploadFile, projFolder)
 
     unzipPromises.length > 0 && log(`Uncompress file ${chalk.bold(path.basename(uploadFile))}, project folder is ${chalk.bold(path.basename(projFolder))}`)
-    this.commandQueue.length > 0 && log('Wait for other command execution of the devTool')
+    this.idle === false && log('Wait for other command execution of the devTool')
 
-    let promises = [].concat(unzipPromises, this.commandQueue)
-    promises.length > 0 && await Promise.all(promises)
+    this.pushQueue(...unzipPromises)
 
-    let devToolPromise = this.devTool.upload(projFolder, version, message)
-    this.commandQueue.push(devToolPromise)
+    const command = () => {
+      log('Start to upload to weixin server')
+      return this.devTool.upload(projFolder, version, message)
+    }
 
-    log('Start to upload to weixin server')
-
-    await devToolPromise.catch((error: CommandError) => {
+    const catchError = (error: CommandError) => {
       switch (error.code) {
         case 255:
           conn.setStatus(401)
@@ -78,14 +75,12 @@ export default class Deployer {
       }
 
       return Promise.reject(error)
-    })
+    }
 
-    let index = this.commandQueue.indexOf(devToolPromise)
-    this.commandQueue.splice(index, 1)
+    await this.execute(command).catch(catchError)
+    await removeFiles(uploadFile, projFolder)
 
-    await this.removeFiles(uploadFile, projFolder)
     log('Upload completed')
-
     conn.toJson({ message: 'Upload completed.' })
   }
 
@@ -115,49 +110,12 @@ export default class Deployer {
     })
   }
 
-  private async unzip (file: string, folder: string): Promise<Array<Promise<void>>> {
-    const zip = new Zip()
-    const contents = await zip.loadAsync(fs.readFileSync(file))
-
-    return Object.keys(contents.files).map(async (file) => {
-      if (!zip.file(file)) {
-        return
-      }
-
-      const content = await zip.file(file).async('nodebuffer')
-
-      file = path.join(folder, file)
-      const parent = path.dirname(file)
-
-      fs.ensureDirSync(parent)
-      return writeFilePromisify(file, content)
-    })
-  }
-
-  private ensureDirs (...dirs: Array<string>) {
-    let promises = dirs.map((dir) => fs.ensureDir(dir))
-    return Promise.all(promises)
-  }
-
-  private removeFiles (...files: Array<string>) {
-    let promises = files.map((dir) => fs.remove(dir))
-    return Promise.all(promises)
-  }
-
-  private logger (uid: string): (message: string) => void {
-    return (message) => {
-      const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
-      stdoutServ.info(`[${chalk.green(uid)}] ${message} ${chalk.gray(datetime)}`)
-    }
-  }
-
   public destory (): void {
-    this.server.destory()
-    this.commandQueue.splice(0)
-    this.devTool.destory()
+    super.destory()
 
-    this.options = null
-    this.devTool = null
-    this.commandQueue = null
+    this.server.close()
+
+    this.devTool = undefined
+    this.options = undefined
   }
 }
