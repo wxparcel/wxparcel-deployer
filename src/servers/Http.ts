@@ -8,7 +8,7 @@ import Connection from '../libs/HttpConnection'
 import Server from '../libs/HttpServer'
 import { ensureDirs, removeFiles, unzip } from '../share/fns'
 import Base from './Base'
-import { IncomingMessage } from 'http'
+import { Server as HttpServ, IncomingMessage } from 'http'
 import { CommandError } from '../typings'
 
 export default class Http extends Base {
@@ -20,17 +20,16 @@ export default class Http extends Base {
     super()
 
     this.options = options
+    this.devTool = new DevTool(this.options)
+    this.server = new Server()
+    this.server.route('GET', '/status', this.status.bind(this))
+    this.server.route('POST', '/upload', this.upload.bind(this))
   }
 
   public start (): Promise<void> {
     return new Promise((resolve) => {
-      const { deployServerPort } = this.options
-      this.devTool = new DevTool(this.options)
-
-      this.server = new Server()
-      this.server.route('GET', '/status', this.status.bind(this))
-      this.server.route('POST', '/upload', this.upload.bind(this))
-      this.server.listen(deployServerPort, resolve)
+      const { port } = this.options
+      this.server.listen(port, resolve)
     })
   }
 
@@ -84,6 +83,19 @@ export default class Http extends Base {
     conn.toJson({ message: 'Upload completed.' })
   }
 
+  public destory (): void {
+    super.destory()
+
+    this.server.close()
+
+    this.devTool = undefined
+    this.options = undefined
+  }
+
+  public getServer (): HttpServ {
+    return this.server ? this.server.server : null
+  }
+
   private transfer (request: IncomingMessage): Promise<any> {
     return new Promise((resolve, reject) => {
       const { uploadPath } = this.options
@@ -108,14 +120,5 @@ export default class Http extends Base {
 
       form.on('end', () => resolve(formData))
     })
-  }
-
-  public destory (): void {
-    super.destory()
-
-    this.server.close()
-
-    this.devTool = undefined
-    this.options = undefined
   }
 }

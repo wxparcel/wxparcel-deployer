@@ -1,10 +1,11 @@
 import net = require('net')
 import Connection from './SocketConnection'
-import { Socket } from 'net'
+import { Server as HttpServ } from 'http'
+import { Server, Socket } from 'net'
 
 export default class SocketServer {
   private listeners: Array<{ event: string, handle: (socket: Connection) => Promise<void> }>
-  private server: net.Server
+  public server: Server
 
   constructor () {
     this.listeners = []
@@ -31,7 +32,7 @@ export default class SocketServer {
     this.server.close()
   }
 
-  public destory () {
+  public destory (): void {
     this.listeners.splice(0)
     this.server.close()
 
@@ -39,7 +40,11 @@ export default class SocketServer {
     this.server = undefined
   }
 
-  private async connect (socket: Socket) {
+  public attach (server: HttpServ): void {
+    server.on('connection', this.connect.bind(this))
+  }
+
+  private async connect (socket: Socket): Promise<void> {
     let client = new Connection(socket)
 
     this.listeners.forEach(({ event, handle }) => {

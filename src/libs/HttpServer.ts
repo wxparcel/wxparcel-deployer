@@ -3,12 +3,12 @@ import pathToRegexp = require('path-to-regexp')
 import chalk from 'chalk'
 import HttpConnection from './HttpConnection'
 import stdoutServ from '../services/stdout'
-import { IncomingMessage, ServerResponse } from 'http'
+import { Server, IncomingMessage, ServerResponse } from 'http'
 import { HTTPServerRoute, HTTPServerRouteHandler } from '../typings'
 
 export default class HttpServer {
   private routes: Array<HTTPServerRoute>
-  private server: http.Server
+  public server: Server
 
   constructor () {
     this.routes = []

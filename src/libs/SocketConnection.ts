@@ -1,22 +1,22 @@
-import net = require('net')
 import assign = require('lodash/assign')
+import { Socket } from 'net'
 
-export default class Socket {
-  private socket: net.Socket
-  private listeners: Array<{ eventType: string | symbol, handle: (data: any, socket: Socket) => void}>
+export default class SocketConnection {
+  private socket: Socket
+  private listeners: Array<{ eventType: string | symbol, handle: (data: any, socket: SocketConnection) => void}>
   private belongings: { [key: string]: any }
 
-  constructor (socket: net.Socket) {
+  constructor (socket: Socket) {
     this.socket = socket
     this.listeners = []
     this.belongings = {}
 
     this.socket.connecting === true
     ? this.socket.on('connect', this.register.bind(this))
-    : this.register()
+    : this.register(socket)
   }
 
-  public on (eventType: string, handle: (data: any, socket: Socket) => void) {
+  public on (eventType: string, handle: (data: any, socket: SocketConnection) => void) {
     this.listeners.push({ eventType, handle })
   }
 
@@ -52,7 +52,7 @@ export default class Socket {
     this.listeners = undefined
   }
 
-  private register () {
+  private register (socket) {
     this.trigger('connected')
 
     this.socket.on('data', this.pipe.bind(this))

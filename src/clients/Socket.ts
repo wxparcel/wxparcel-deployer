@@ -1,26 +1,29 @@
 import net = require('net')
 import ip = require('ip')
+import terminalImage = require('terminal-image')
 import { ClientOptions } from '../libs/OptionManager'
 import Connection from '../libs/SocketConnection'
 import stdoutServ from '../services/stdout'
 
 export default class Socket {
   private options: ClientOptions
+  private socket: Connection
 
   constructor (options: ClientOptions) {
     this.options = options
   }
 
-  public async connect (): Promise<Connection> {
-    const { deployServer } = this.options
-    const uri = new URL(deployServer)
-    return this.connectServer(Number(uri.port), uri.host)
+  public async connect (): Promise<void> {
+    const { server } = this.options
+    const { port, hostname } = new URL(server)
+    this.socket = await this.connectServer(Number(port), hostname)
   }
 
   private async connectServer (port: number = 3000, host: string = ip.address()): Promise<Connection> {
     return new Promise((resolve) => {
       const { uid } = this.options
       const socket = net.createConnection(port, host)
+
       const client = new Connection(socket)
       client.carry({ uid })
 
@@ -37,5 +40,13 @@ export default class Socket {
       client.on('connected', complete)
       client.on('destroy', reConnect)
     })
+  }
+
+  public login () {
+    this.socket.on('qrcode', (qrcode: Buffer) => {
+      terminalImage.buffer(qrcode)
+    })
+
+    this.socket.send('login')
   }
 }

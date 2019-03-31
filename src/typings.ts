@@ -50,11 +50,11 @@ export interface ServerBaseOptions extends BaseOptions {
   qrcodePath?: string
   devToolCli?: string
   devToolServer?: string
-  deployServerPort?: number
+  port?: number
 }
 export interface ClientBaseOptions extends BaseOptions {
   releasePath?: string
-  deployServer?: string
+  server?: string
 }
 export interface ServerCLIOptions {
   config?: string
@@ -68,6 +68,7 @@ export interface ClientCLIOptions {
   message?: string
   folder?: string
   server?: string
+  socket?: any
 }
 
 export type DevToolQRCodeHandle = (qrcode: string | Buffer) => void

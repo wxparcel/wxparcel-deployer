@@ -7,6 +7,7 @@ import { ServerOptions } from '../libs/OptionManager'
 import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
 import HttpServer from '../servers/Http'
+import SocketServer from '../servers/Socket'
 import * as pkg from '../../package.json'
 import { ServerCLIOptions } from '../typings'
 
@@ -30,7 +31,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
     ...defaultOptions,
     devToolCli: options.devToolCli,
     devToolServer: options.devToolServ,
-    deployServerPort: port
+    port: port
   })
 
   if (!(globalOptions.devToolCli || globalOptions.devToolServer)) {
@@ -40,11 +41,14 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const logger = new Logger({ type: globalOptions.logType })
   logger.listen(stdoutServ)
 
-  const deployer = new HttpServer(globalOptions)
-  await deployer.start()
+  let server = options.hasOwnProperty('socket')
+    ? new SocketServer(globalOptions)
+    : new HttpServer(globalOptions)
+
+  await server.start()
 
   stdoutServ.clear()
-  stdoutServ.log(chalk.gray.bold('WXParcel Deployer Server'))
+  stdoutServ.log(chalk.gray.bold('WXParcel httpServ Server'))
   stdoutServ.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   stdoutServ.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
   globalOptions.devToolCli && stdoutServ.log(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
@@ -53,7 +57,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
 
   let handleProcessSigint = process.exit.bind(process)
   let handleProcessExit = () => {
-    deployer && deployer.destory()
+    server && server.destory()
 
     process.removeListener('exit', handleProcessExit)
     process.removeListener('SIGINT', handleProcessSigint)
@@ -73,4 +77,5 @@ program
 .option('-p, --port <port>', 'setting server port, default use idle port')
 .option('--dev-tool-cli <devToolCli>', 'setting devtool cli file path')
 .option('--dev-tool-serv <devToolServ>', 'setting devtool server url')
+.option('--socket', 'setting devtool server url')
 .action(server)

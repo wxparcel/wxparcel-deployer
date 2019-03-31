@@ -18,8 +18,8 @@ export default class Http extends Base {
 
     this.options = options
 
-    const { deployServer } = this.options
-    const serverUrl = /^https?:\/\//.test(deployServer) ? deployServer : `http://${deployServer}`
+    const { server } = this.options
+    const serverUrl = /^https?:\/\//.test(server) ? server : `http://${server}`
     const axiosOptions: AxiosRequestConfig = {
       baseURL: serverUrl
     }
@@ -69,7 +69,15 @@ export default class Http extends Base {
       formData.append('file', stream)
       forEach(data, (value, name) => formData.append(name, value))
 
-      const contentSzie = await promisify(formData.getLength.bind(formData))()
+      const catchError = (error) => {
+        let { message } = error
+        stdoutServ.error(message)
+        reject(error)
+
+        return Promise.reject(error)
+      }
+
+      const contentSzie = await promisify(formData.getLength.bind(formData))().catch(catchError)
 
       const headers = {
         'Accept': 'application/json',
@@ -85,12 +93,7 @@ export default class Http extends Base {
         }
       }
 
-      const result = await this.request.post(serverUrl, formData, config).catch((error) => {
-        let { message } = error
-        stdoutServ.error(message)
-
-        return Promise.reject(error)
-      })
+      const result = await this.request.post(serverUrl, formData, config).catch(catchError)
 
       resolve(result)
     })

@@ -92,48 +92,6 @@ export default class DevTool {
     }
 
     return response
-
-    // const task = async (statsFile: string, killToken: symbol) => {
-    //   if (this.request) {
-    //     const params = {
-    //       format: 'base64',
-    //       resultoutput: statsFile
-    //     }
-
-    //     const response = await this.request.get('/login', { params })
-    //     const { data: qrcode } = response
-    //     if (!/^data:image\/jpeg;base64/.test(qrcode)) {
-    //       return Promise.reject(new Error('QRcode is not a base64 data'))
-    //     }
-
-    //     qrcodeCallback(qrcode)
-
-    //   } else {
-    //     const { uid, qrcodePath } = this.options
-    //     const qrcodeFile = path.join(qrcodePath, uid)
-
-    //     fs.ensureDirSync(qrcodePath)
-
-    //     const params = [
-    //       '--login',
-    //       '--login-qr-output', `base64@${qrcodeFile}`,
-    //       '--login-result-output', `${statsFile}`
-    //     ]
-
-    //     let promise = this.command(params, null, null, killToken)
-    //     let qrcode = fs.readFileSync(qrcodeFile).toString()
-    //     qrcodeCallback(qrcode)
-
-    //     await promise
-    //   }
-    // }
-
-    // const response = await this.execute(task)
-    // if (response.status !== 'SUCCESS') {
-    //   return Promise.reject(new Error(response.error))
-    // }
-
-    // return response
   }
 
   /**
@@ -329,26 +287,6 @@ export default class DevTool {
     }
   }
 
-  private async exeddcute (task: (statsFile: string) => Promise<any>): Promise<any> {
-    const { tempPath, uid } = this.options
-    const statsFile = path.join(tempPath, `./stats/${uid}.json`)
-    fs.ensureFileSync(statsFile)
-
-    let killToken = genKillToken()
-    let promise = this.watchFile(statsFile, killToken)
-    await task(statsFile).catch((error) => {
-      this.kill(killToken)
-      return Promise.reject(error)
-    })
-
-    let content = await promise.catch((error) => {
-      this.kill(killToken)
-      return Promise.reject(error)
-    })
-
-    return JSON.parse(content.toString())
-  }
-
   public destory () {
     let warders = this.warders.splice(0)
     warders.forEach((warder) => warder.kill())
@@ -431,9 +369,15 @@ export default class DevTool {
       let timeId = setTimeout(timer, timeout)
       this.warders.push({ token: killToken, kill })
 
-      let response = await promise
-      clearTimeout(timeId)
-      resolve(response)
+      try {
+        let response = await promise
+        clearTimeout(timeId)
+        resolve(response)
+
+      } catch (error) {
+        clearTimeout(timeId)
+        reject(error)
+      }
     })
   }
 
