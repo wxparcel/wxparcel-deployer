@@ -1,6 +1,6 @@
 {
   "name": "wxparcel-deployer",
-  "version": "1.0.0-alpha.1.2",
+  "version": "1.0.0-alpha.2.0",
   "bin": "./bin/cli",
   "main": "./libs/index.js",
   "license": "MIT",
@@ -27,8 +27,10 @@
     "compile": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5",
     "compile:watch": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5 --watch",
     "server": "npm run compile && nodemon --exec \"node ./libs/cli.js server\" --watch libs --ext js",
+    "server:socket": "npm run compile && nodemon --exec \"node ./libs/cli.js server --socket\" --watch libs --ext js",
     "develop": "concurrently \"npm run compile:watch\" \"npm run server\"",
     "release": "npm run compile",
+    "socket": "concurrently \"npm run compile:watch\" \"npm run server:socket\"",
     "start": "npm run develop"
   },
   "devDependencies": {

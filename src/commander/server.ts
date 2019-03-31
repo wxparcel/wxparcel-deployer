@@ -48,7 +48,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
   await server.start()
 
   stdoutServ.clear()
-  stdoutServ.log(chalk.gray.bold('WXParcel httpServ Server'))
+  stdoutServ.log(chalk.gray.bold('WXParcel Server'))
   stdoutServ.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   stdoutServ.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
   globalOptions.devToolCli && stdoutServ.log(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)

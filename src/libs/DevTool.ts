@@ -79,7 +79,7 @@ export default class DevTool {
     const task = (statsFile: string, killToken: symbol) => {
       const params = [
         '--login',
-        '--login-qr-output', `base64@${qrcodeFile}`,
+        '--login-qr-output', `image@${qrcodeFile}`,
         '--login-result-output', `${statsFile}`
       ]
 
@@ -346,7 +346,7 @@ export default class DevTool {
     return promise
   }
 
-  private async command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: symbol = genKillToken()): Promise<any> {
+  private command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: symbol = genKillToken()): Promise<any> {
     const { devToolCli } = this.options
 
     let promise = this.spawn(devToolCli, params, options, stdout, killToken)
@@ -360,7 +360,7 @@ export default class DevTool {
       let timer = () => {
         this.kill(killToken)
 
-        let error = new Error('Timeout') as CommandError
+        let error = new Error('Command Timeout') as CommandError
         error.code = -408
 
         reject(error)

@@ -38,12 +38,13 @@ export default class Http extends Base {
   public async uploadProject (folder: string, version: string, message: string): Promise<any> {
     message = message || await this.getGitMessage(folder)
 
+    const { releasePath } = this.options
     const { appid, compileType, libVersion, projectname } = await this.getProjectConfig(folder)
-    const { uid, releasePath } = this.options
     const zipFile = path.join(releasePath, `${appid}.zip`)
 
     await this.compress(folder, zipFile)
-    const response = await this.upload('/upload', zipFile, { uid, appid, version, message, compileType, libVersion, projectname: decodeURIComponent(projectname) })
+    let datas = { appid, version, message, compileType, libVersion, projectname: decodeURIComponent(projectname) }
+    const response = await this.upload('/upload', zipFile, datas)
 
     fs.removeSync(zipFile)
     return response
@@ -55,7 +56,7 @@ export default class Http extends Base {
     }
 
     return new Promise(async (resolve, reject) => {
-      const { maxFileSize } = this.options
+      const { uid, maxFileSize } = this.options
       const { size } = fs.statSync(file)
       if (size > maxFileSize) {
         return Promise.reject(new Error(`File size is over ${unitSize(maxFileSize)}`))
@@ -67,7 +68,7 @@ export default class Http extends Base {
 
       const formData = new FormData()
       formData.append('file', stream)
-      forEach(data, (value, name) => formData.append(name, value))
+      forEach(Object.assign({ uid }, data), (value, name) => formData.append(name, value))
 
       const catchError = (error) => {
         let { message } = error

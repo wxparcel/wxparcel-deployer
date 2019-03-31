@@ -45,12 +45,8 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
 
   let folder = options.folder || globalOptions.rootPath
   if (options.hasOwnProperty('socket')) {
-    let client = new SocketClient(globalOptions)
-
-    stdoutServ.clear()
-    await client.connect()
-
-    // stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
+    stdoutServ.warn('Upload function has not been completed yet in socket mode.')
+    stdoutServ.warn(`Please use ${chalk.yellow.bold('wxparcel-deployer deploy')} to upload project.`)
 
   } else {
     let client = new HttpClient(globalOptions)

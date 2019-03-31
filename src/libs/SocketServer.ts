@@ -1,6 +1,7 @@
+import chalk from 'chalk'
 import net = require('net')
 import Connection from './SocketConnection'
-import { Server as HttpServ } from 'http'
+import stdoutServ from '../services/stdout'
 import { Server, Socket } from 'net'
 
 export default class SocketServer {
@@ -40,15 +41,17 @@ export default class SocketServer {
     this.server = undefined
   }
 
-  public attach (server: HttpServ): void {
-    server.on('connection', this.connect.bind(this))
-  }
-
   private async connect (socket: Socket): Promise<void> {
     let client = new Connection(socket)
 
     this.listeners.forEach(({ event, handle }) => {
-      client.on(event, handle.bind(null, client))
+      const listen = () => {
+        const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
+        stdoutServ.ok(`[${chalk.gray('HIT')}][${chalk.green.bold(event)}] ${datetime}`)
+        handle(client)
+      }
+
+      client.on(event, listen)
     })
   }
 }

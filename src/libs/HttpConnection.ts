@@ -1,7 +1,5 @@
 import { IncomingMessage, ServerResponse } from 'http'
-import defaultsDeep = require('lodash/defaultsDeep')
-import pick = require('lodash/pick')
-import { HttpServerResponse } from '../typings'
+import { StandardResponse } from '../typings'
 
 export default class HttpConnection {
   public request: IncomingMessage
@@ -54,12 +52,10 @@ export default class HttpConnection {
     this.status = status
   }
 
-  public toJson (response: any = {}) {
+  public writeJson (response?: StandardResponse): void {
     if (this.flush === true) {
       return
     }
-
-    response = this.arrangeJsonResponse(response)
 
     let body = JSON.stringify({ ...response, status: this.status })
     this.writeHead('Content-Type', 'application/json;charset=utf-8')
@@ -68,40 +64,6 @@ export default class HttpConnection {
     this.response.writeHead(this.status, this.head)
     this.response.end(body)
     this.flush = true
-  }
-
-  private arrangeJsonResponse (content: any): HttpServerResponse {
-    let response = this.genJsonResponse()
-    let keys = Object.keys(response)
-    content = pick(content, keys)
-
-    return defaultsDeep(content, response)
-  }
-
-  private genJsonResponse (): HttpServerResponse {
-    let status = this.status
-    let code = 0
-    let data = null
-    let message = this.genMessage()
-
-    return { status, code, data, message }
-  }
-
-  private genMessage (): string {
-    switch (this.status) {
-      case 200:
-        return 'OK'
-      case 401:
-        return 'Unauthorized'
-      case 404:
-        return 'Not Found'
-      case 405:
-        return 'Method Not Allowed'
-      case 408:
-        return 'Request Timeout'
-    }
-
-    return 'ok'
   }
 
   public destroy () {

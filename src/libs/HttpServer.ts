@@ -26,13 +26,13 @@ export default class HttpServer {
 
       if (params) {
         const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
-        stdoutServ.info(`[${chalk.gray('HIT')}][${chalk.green(method.toUpperCase())}] ${url} ${chalk.gray(datetime)}`)
+        stdoutServ.info(`[${chalk.gray('HIT')}][${chalk.green.bold(method.toUpperCase())}] ${url} ${chalk.gray(datetime)}`)
 
         connection.setMethods(methods as Array<string>)
         connection.setCros()
 
         if (connection.status !== 200) {
-          connection.toJson()
+          connection.writeJson()
           connection.destroy()
           return true
         }
@@ -44,7 +44,7 @@ export default class HttpServer {
           stdoutServ.error(error)
 
           connection.setStatus(500)
-          connection.toJson({ message: error.message })
+          connection.writeJson({ message: error.message })
           connection.destroy()
         }
 
@@ -84,10 +84,10 @@ export default class HttpServer {
       if (hit !== true) {
         const { method, url } = request
         const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
-        stdoutServ.warn(`[${chalk.gray('MISS')}][${chalk.green(method.toUpperCase())}] ${url} ${datetime}`)
+        stdoutServ.warn(`[${chalk.gray('MISS')}][${chalk.green.bold(method.toUpperCase())}] ${url} ${datetime}`)
 
         connection.setStatus(404)
-        connection.toJson()
+        connection.writeJson()
       }
 
       response.finished || response.end()
@@ -95,7 +95,7 @@ export default class HttpServer {
     } catch (error) {
       connection.setCros()
       connection.setStatus(500)
-      connection.toJson()
+      connection.writeJson()
     }
   }
 

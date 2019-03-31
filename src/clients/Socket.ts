@@ -14,9 +14,10 @@ export default class Socket {
   }
 
   public async connect (): Promise<void> {
-    const { server } = this.options
+    const { uid, server } = this.options
     const { port, hostname } = new URL(server)
     this.socket = await this.connectServer(Number(port), hostname)
+    this.socket.carry({ uid })
   }
 
   private async connectServer (port: number = 3000, host: string = ip.address()): Promise<Connection> {
@@ -42,11 +43,16 @@ export default class Socket {
     })
   }
 
-  public login () {
-    this.socket.on('qrcode', (qrcode: Buffer) => {
-      terminalImage.buffer(qrcode)
-    })
+  public login (): Promise<void> {
+    return new Promise((resolve) => {
+      const qrcode = async (qrcode: Buffer) => {
+        let image = await terminalImage.buffer(qrcode)
+        console.log(image)
+      }
 
-    this.socket.send('login')
+      this.socket.on('qrcode', qrcode)
+      this.socket.on('login', resolve)
+      this.socket.send('login')
+    })
   }
 }

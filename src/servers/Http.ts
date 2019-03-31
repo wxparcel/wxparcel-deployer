@@ -8,8 +8,8 @@ import Connection from '../libs/HttpConnection'
 import Server from '../libs/HttpServer'
 import { ensureDirs, removeFiles, unzip } from '../share/fns'
 import Base from './Base'
-import { Server as HttpServ, IncomingMessage } from 'http'
-import { CommandError } from '../typings'
+import { IncomingMessage } from 'http'
+import { CommandError, StandardResponse } from '../typings'
 
 export default class Http extends Base {
   private options: ServerOptions
@@ -34,7 +34,7 @@ export default class Http extends Base {
   }
 
   public async status (_: RegExpExecArray, conn: Connection): Promise<void> {
-    conn.toJson({ message: 'okaya, server is running.' })
+    this.writeJson({ message: 'okaya, server is running.' }, conn)
   }
 
   public async upload (_: RegExpExecArray, conn: Connection): Promise<void> {
@@ -62,16 +62,10 @@ export default class Http extends Base {
     }
 
     const catchError = (error: CommandError) => {
-      switch (error.code) {
-        case 255:
-          conn.setStatus(401)
-          conn.toJson({ message: 'You don\'t have permission to upload' })
-          break
-        case -408:
-          conn.setStatus(408)
-          conn.toJson({ message: 'Upload timeout, please retry' })
-          break
-      }
+      let { status, message } = this.resolveCommandError(error)
+
+      conn.setStatus(status)
+      this.writeJson({ message }, conn)
 
       return Promise.reject(error)
     }
@@ -80,7 +74,7 @@ export default class Http extends Base {
     await removeFiles(uploadFile, projFolder)
 
     log('Upload completed')
-    conn.toJson({ message: 'Upload completed.' })
+    this.writeJson({ message: 'Upload completed' }, conn)
   }
 
   public destory (): void {
@@ -90,10 +84,6 @@ export default class Http extends Base {
 
     this.devTool = undefined
     this.options = undefined
-  }
-
-  public getServer (): HttpServ {
-    return this.server ? this.server.server : null
   }
 
   private transfer (request: IncomingMessage): Promise<any> {
@@ -120,5 +110,10 @@ export default class Http extends Base {
 
       form.on('end', () => resolve(formData))
     })
+  }
+
+  private writeJson (content: StandardResponse, conn: Connection) {
+    let response = this.standard({ ...content, status: conn.status })
+    conn.writeJson(response)
   }
 }

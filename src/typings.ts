@@ -12,17 +12,18 @@ export interface CommandError extends Error {
   code?: number
 }
 
-// http server
+// server
 // -----------------
+
+export interface StandardResponse {
+  status?: number
+  code?: number
+  data?: any
+  message?: string
+}
 
 export type HTTPServerRoute = (connection: HttpConnection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
 export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
-export interface HttpServerResponse {
-  status: number
-  code: number
-  data: any
-  message: string
-}
 
 // logger
 // -----------------

@@ -13,7 +13,7 @@ export default class SocketConnection {
 
     this.socket.connecting === true
     ? this.socket.on('connect', this.register.bind(this))
-    : this.register(socket)
+    : this.register()
   }
 
   public on (eventType: string, handle: (data: any, socket: SocketConnection) => void) {
@@ -52,7 +52,7 @@ export default class SocketConnection {
     this.listeners = undefined
   }
 
-  private register (socket) {
+  private register () {
     this.trigger('connected')
 
     this.socket.on('data', this.pipe.bind(this))

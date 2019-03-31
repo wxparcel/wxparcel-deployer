@@ -3,8 +3,7 @@ import Connection from '../libs/SocketConnection'
 import Server from '../libs/SocketServer'
 import DevTool from '../libs/DevTool'
 import Base from './Base'
-import { Server as SocketServ } from 'net'
-import { Server as HttpServ } from 'http'
+import { StandardResponse } from '../typings'
 
 export default class Socket extends Base {
   private options: ServerOptions
@@ -27,18 +26,20 @@ export default class Socket extends Base {
     })
   }
 
-  public attach (server: HttpServ) {
-    this.server.attach(server)
-  }
-
   public async login (socket: Connection) {
-    await this.execute(async () => {
-      await this.devTool.login((qrcode: Buffer) => {
-        // socket.send('qrcode', qrcode)
-      })
-    })
+    const task = async () => {
+      const qrcode = (qrcode: Buffer) => socket.send('qrcode', qrcode)
+      return this.devTool.login(qrcode)
+    }
 
-    socket.send('logined')
+    try {
+      await this.execute(task)
+      this.sendJson(socket, 'login')
+
+    } catch (error) {
+      let { status, message } = this.resolveCommandError(error)
+      this.sendJson(socket, 'login', { status, message })
+    }
   }
 
   public destory (): void {
@@ -50,7 +51,8 @@ export default class Socket extends Base {
     this.options = undefined
   }
 
-  public getServer (): SocketServ {
-    return this.server ? this.server.server : null
+  private sendJson (socket: Connection, eventType: string, content?: StandardResponse) {
+    let response = this.standard({ ...content })
+    socket.send(eventType, response)
   }
 }
