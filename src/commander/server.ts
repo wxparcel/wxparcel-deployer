@@ -1,18 +1,20 @@
-import * as fs from 'fs-extra'
-import * as program from 'commander'
-import * as portscanner from 'portscanner'
+import fs = require('fs-extra')
+import ip = require('ip')
+import program = require('commander')
+import portscanner = require('portscanner')
 import chalk from 'chalk'
 import { ServerOptions } from '../libs/OptionManager'
-import Deployer from '../libs/Deployer'
 import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
+import HttpServer from '../servers/Http'
+import SocketServer from '../servers/Socket'
 import * as pkg from '../../package.json'
-import { ServerCLIOptions } from '../types'
+import { ServerCLIOptions } from '../typings'
 
 export const server = async (options: ServerCLIOptions = {}) => {
   let { config: configFile, port } = options
   if (!port) {
-    port = await portscanner.findAPortNotInUse(3000, 8000)
+    port = await portscanner.findAPortNotInUse(3000, 8000, ip.address())
   }
 
   let defaultOptions: any = {}
@@ -29,7 +31,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
     ...defaultOptions,
     devToolCli: options.devToolCli,
     devToolServer: options.devToolServ,
-    deployServerPort: port
+    port: port
   })
 
   if (!(globalOptions.devToolCli || globalOptions.devToolServer)) {
@@ -39,20 +41,23 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const logger = new Logger({ type: globalOptions.logType })
   logger.listen(stdoutServ)
 
-  const deployer = new Deployer(globalOptions)
-  await deployer.start()
+  let server = options.hasOwnProperty('socket')
+    ? new SocketServer(globalOptions)
+    : new HttpServer(globalOptions)
+
+  await server.start()
 
   stdoutServ.clear()
-  stdoutServ.log(chalk.gray.bold('WXParcel Deployer Server'))
+  stdoutServ.log(chalk.gray.bold('WXParcel Server'))
   stdoutServ.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   stdoutServ.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
   globalOptions.devToolCli && stdoutServ.log(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
   globalOptions.devToolServer && stdoutServ.log(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
-  stdoutServ.log(chalk.blue('Deploy server is running, please make sure wx devtool has been logined.'))
+  stdoutServ.log(chalk.magenta('Deploy server is running, please make sure wx devtool has been logined.'))
 
   let handleProcessSigint = process.exit.bind(process)
-  let handleProcessExit = async () => {
-    deployer && await deployer.destory()
+  let handleProcessExit = () => {
+    server && server.destory()
 
     process.removeListener('exit', handleProcessExit)
     process.removeListener('SIGINT', handleProcessSigint)
@@ -72,4 +77,5 @@ program
 .option('-p, --port <port>', 'setting server port, default use idle port')
 .option('--dev-tool-cli <devToolCli>', 'setting devtool cli file path')
 .option('--dev-tool-serv <devToolServ>', 'setting devtool server url')
+.option('--socket', 'setting devtool server url')
 .action(server)

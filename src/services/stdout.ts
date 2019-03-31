@@ -14,12 +14,22 @@ export class StdoutService extends EventEmitter {
     return this.log(`${chalk.blue.bold('[INFO]')} ${message}`)
   }
 
-  public warn (message: string): void {
-    return this.log(`${chalk.yellow.bold('[WARN]')} ${message}`)
+  public warn (message: string | Error): void {
+    if (message instanceof Error) {
+      this.emit('warn', message)
+      return
+    }
+
+    this.log(`${chalk.yellow.bold('[WARN]')} ${message}`)
   }
 
   public error (message: string | Error): void {
-    this.emit('error', message)
+    if (message instanceof Error) {
+      this.emit('error', message)
+      return
+    }
+
+    this.log(`${chalk.red.bold('[ERROR]')} ${message}`)
   }
 
   public log (message: string): void {

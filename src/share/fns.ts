@@ -1,9 +1,12 @@
-import * as fs from 'fs-extra'
-import { promisify } from 'util'
+import fs = require('fs-extra')
+import path = require('path')
 import { spawn, SpawnOptions } from 'child_process'
-import { Stdout, ChildProcessMap } from '../types'
+import Zip = require('jszip')
+import { promisify } from 'util'
+import { Stdout, ChildProcessMap, ClientZipSource } from '../typings'
 
-export const writeFilePromisify = promisify(fs.writeFile.bind(fs))
+// size
+// -------------
 
 export const unitSize = (size: number, amount: number = 1024, units: Array<string> = ['K', 'M', 'G']): string => {
   const loop = (size: number, units: Array<string>): string => {
@@ -17,9 +20,87 @@ export const unitSize = (size: number, amount: number = 1024, units: Array<strin
   return loop(size, units) + units[0]
 }
 
+// fs
+// -------------
+
+export const writeFilePromisify = promisify(fs.writeFile.bind(fs))
+
+export const unzip = async (file: string, folder: string): Promise<Array<Promise<void>>> => {
+  const zip = new Zip()
+  const contents = await zip.loadAsync(fs.readFileSync(file))
+
+  return Object.keys(contents.files).map(async (file) => {
+    if (!zip.file(file)) {
+      return
+    }
+
+    const content = await zip.file(file).async('nodebuffer')
+
+    file = path.join(folder, file)
+    const parent = path.dirname(file)
+
+    fs.ensureDirSync(parent)
+    return writeFilePromisify(file, content)
+  })
+}
+
+export const ensureDirs = async (...dirs: Array<string>) => {
+  let ensureDirPromisify = promisify(fs.ensureDir.bind(fs))
+  let promises = dirs.map((dir) => ensureDirPromisify(dir))
+  return Promise.all(promises)
+}
+
+export const removeFiles = (...files: Array<string>) => {
+  let removePromisify = promisify(fs.remove.bind(fs))
+  let promises = files.map((dir) => removePromisify(dir))
+  return Promise.all(promises)
+}
+
+export const findFiles = (file: string, relativeTo: string): Array<ClientZipSource> => {
+  const fileMap: Array<ClientZipSource> = []
+
+  const findDeep = (file: string): void => {
+    const stat = fs.statSync(file)
+
+    if (stat.isFile()) {
+      const destination = file.replace(relativeTo, '')
+      fileMap.push({ file, destination })
+    }
+
+    if (stat.isDirectory()) {
+      const folder = path.isAbsolute(file) ? file : path.join(file, relativeTo)
+      const files = fs.readdirSync(file)
+
+      files.forEach((filename) => {
+        let file = path.join(folder, filename)
+        findDeep(file)
+      })
+    }
+  }
+
+  findDeep(file)
+  return fileMap
+}
+
+export const zip = (file: string, relativeTo: string, zip: Zip = new Zip()): Zip => {
+  let fileMap = this.findFiles(file, relativeTo)
+
+  fileMap.forEach(({ file, destination }) => {
+    let name = path.basename(destination)
+    let folder = path.dirname(destination)
+    let stream = fs.createReadStream(file)
+    zip.folder(folder).file(name, stream)
+  })
+
+  return zip
+}
+
+// child_process
+// -------------
+
 const processes: Array<ChildProcessMap> = []
 
-export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => {
+export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol): Promise<any> => {
   return new Promise((resolve, reject) => {
     let cp = spawn(cli, params || [], options || {})
 

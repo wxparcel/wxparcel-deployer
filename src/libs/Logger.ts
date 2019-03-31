@@ -1,8 +1,7 @@
 import chalk from 'chalk'
-import forEach = require('lodash/forEach')
 import PrettyError = require('pretty-error')
 import { Bar } from 'cli-progress'
-import { LogTypes, LoggerOptions } from '../types'
+import { LogTypes, LoggerOptions } from '../typings'
 
 export default class Logger {
   private type: keyof typeof LogTypes | Array<keyof typeof LogTypes>
@@ -56,7 +55,7 @@ export default class Logger {
       return this.trace(message, chalk.red.bind(chalk))
     }
 
-    return this.log(message)
+    return this.log(chalk.red(message))
   }
 
   public warn (message: string | Error): void {
@@ -64,7 +63,7 @@ export default class Logger {
       return this.trace(message, chalk.yellow.bind(chalk))
     }
 
-    return this.log(message)
+    return this.log(chalk.yellow(message))
   }
 
   public trace (message: string | Error, color?: (message: string) => string): void {

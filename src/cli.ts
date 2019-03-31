@@ -1,5 +1,5 @@
-import * as program from 'commander'
-import * as pkg from '../package.json'
+import program = require('commander')
+import pkg = require('../package.json')
 import './commander/server'
 import './commander/deploy'
 

@@ -1,6 +1,6 @@
 {
   "name": "wxparcel-deployer",
-  "version": "1.0.0-alpha.1.1",
+  "version": "1.0.0-alpha.2.0",
   "bin": "./bin/cli",
   "main": "./libs/index.js",
   "license": "MIT",
@@ -24,8 +24,13 @@
     "tslint": "tslint --config ./tslint.json --fix './src/**/*.ts'",
     "lint": "npm run tslint",
     "test": "npm run lint",
-    "develop": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5 --watch",
-    "release": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5",
+    "compile": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5",
+    "compile:watch": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5 --watch",
+    "server": "npm run compile && nodemon --exec \"node ./libs/cli.js server\" --watch libs --ext js",
+    "server:socket": "npm run compile && nodemon --exec \"node ./libs/cli.js server --socket\" --watch libs --ext js",
+    "develop": "concurrently \"npm run compile:watch\" \"npm run server\"",
+    "release": "npm run compile",
+    "socket": "concurrently \"npm run compile:watch\" \"npm run server:socket\"",
     "start": "npm run develop"
   },
   "devDependencies": {
@@ -41,7 +46,10 @@
     "@types/node": "^11.10.5",
     "@types/path-to-regexp": "^1.7.0",
     "@types/portscanner": "^2.1.0",
+    "@types/shortid": "^0.0.29",
+    "concurrently": "^4.1.0",
     "lint-staged": "^7.2.2",
+    "nodemon": "^1.18.10",
     "pre-commit": "^1.2.2",
     "rimraf": "^2.6.3",
     "tslint": "^5.12.1",
@@ -49,7 +57,6 @@
     "typescript": "^3.3.3"
   },
   "dependencies": {
-    "@types/shortid": "^0.0.29",
     "axios": "^0.18.0",
     "chalk": "^2.4.2",
     "cli-progress": "^2.1.1",
@@ -64,6 +71,7 @@
     "path-to-regexp": "^3.0.0",
     "portscanner": "^2.2.0",
     "pretty-error": "^2.1.1",
-    "shortid": "^2.2.14"
+    "shortid": "^2.2.14",
+    "terminal-image": "^0.1.2"
   }
 }

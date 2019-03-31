@@ -1,6 +1,5 @@
 import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
-import { ChildProcess } from 'child_process'
-import Connection from './libs/Connection'
+import HttpConnection from './libs/HttpConnection'
 
 export type Stdout = (data: Buffer, type?: string) => void
 
@@ -9,14 +8,25 @@ export interface ChildProcessMap {
   kill: () => void
 }
 
-export type ServerMiddle = (connection: Connection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
-export type ServerRouteHandle = (params: any, connection: Connection) => Promise<any>
-export interface ServerResponse {
-  status: number
-  code: number
-  data: any
-  message: string
+export interface CommandError extends Error {
+  code?: number
 }
+
+// server
+// -----------------
+
+export interface StandardResponse {
+  status?: number
+  code?: number
+  data?: any
+  message?: string
+}
+
+export type HTTPServerRoute = (connection: HttpConnection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
+export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
+
+// logger
+// -----------------
 
 export enum LogTypes {
   console
@@ -25,6 +35,9 @@ export enum LogTypes {
 export interface LoggerOptions {
   type?: keyof typeof LogTypes
 }
+
+// Options
+// --------------
 
 export interface BaseOptions {
   uid?: string
@@ -38,11 +51,11 @@ export interface ServerBaseOptions extends BaseOptions {
   qrcodePath?: string
   devToolCli?: string
   devToolServer?: string
-  deployServerPort?: number
+  port?: number
 }
 export interface ClientBaseOptions extends BaseOptions {
   releasePath?: string
-  deployServer?: string
+  server?: string
 }
 export interface ServerCLIOptions {
   config?: string
@@ -55,10 +68,11 @@ export interface ClientCLIOptions {
   version?: string
   message?: string
   folder?: string
-  deployServ?: string
+  server?: string
+  socket?: any
 }
 
-export type DevToolQRCodeHandle = (qrcode: string) => void
+export type DevToolQRCodeHandle = (qrcode: string | Buffer) => void
 
 export interface ClientZipSource {
   file: string

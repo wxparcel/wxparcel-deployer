@@ -1,10 +1,10 @@
-import * as os from 'os'
-import * as fs from 'fs-extra'
-import * as path from 'path'
-import * as shortid from 'shortid'
-import * as ip from 'ip'
+import os = require('os')
+import fs = require('fs-extra')
+import path = require('path')
+import shortid = require('shortid')
+import ip = require('ip')
 import trimEnd = require('lodash/trimEnd')
-import { LogTypes, BaseOptions, ServerBaseOptions, ClientBaseOptions } from '../types'
+import { LogTypes, BaseOptions, ServerBaseOptions, ClientBaseOptions } from '../typings'
 
 export class OptionManager {
   public uid: string
@@ -41,7 +41,7 @@ export class ServerOptions extends OptionManager {
   public qrcodePath: string
   public devToolCli: string
   public devToolServer: string
-  public deployServerPort: number
+  public port: number
 
   constructor (options: ServerBaseOptions) {
     super(options)
@@ -57,8 +57,8 @@ export class ServerOptions extends OptionManager {
   public configure (options: ServerBaseOptions) {
     super.configure(options)
 
-    if (options.hasOwnProperty('deployServerPort')) {
-      this.deployServerPort = options.deployServerPort
+    if (options.hasOwnProperty('port')) {
+      this.port = options.port
     }
 
     if (options.hasOwnProperty('devToolServer')) {
@@ -73,12 +73,16 @@ export class ServerOptions extends OptionManager {
 
 export class ClientOptions extends OptionManager {
   public releasePath: string
-  public deployServer: string
+  public server: string
 
   constructor (options: ClientBaseOptions) {
     super(options)
 
     this.releasePath = options.releasePath && path.isAbsolute(options.releasePath) ? options.releasePath : path.join(this.tempPath, options.releasePath || 'release')
-    this.deployServer = options.deployServer || `http://${this.ip}:3000`
+    this.server = options.server || `http://${this.ip}:3000`
+
+    if (!/https?:\/\//.test(this.server)) {
+      throw new Error(`Deploy server error, ${this.server}`)
+    }
   }
 }

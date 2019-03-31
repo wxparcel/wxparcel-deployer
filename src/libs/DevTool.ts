@@ -1,11 +1,11 @@
-import * as path from 'path'
-import * as fs from 'fs-extra'
+import fs = require('fs-extra')
+import path = require('path')
 import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
 import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
-import { spawnPromisify, killToken as genKillToken } from '../share/fns'
-import { Stdout, DevToolQRCodeHandle } from '../types'
+import { spawnPromisify, killToken as genKillToken, killProcess } from '../share/fns'
+import { Stdout, DevToolQRCodeHandle, CommandError } from '../typings'
 
 const responseInterceptors = (response) => {
   const { status, data: message } = response
@@ -19,10 +19,11 @@ const responseInterceptors = (response) => {
 export default class DevTool {
   private options: ServerOptions
   private request: AxiosInstance
-  private command: (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => Promise<any>
+  private warders: Array<{ token: Symbol, kill: () => void }>
 
   constructor (options: ServerOptions) {
     this.options = options
+    this.warders = []
 
     if (this.options.devToolServer) {
       const axiosOptions = {
@@ -33,14 +34,6 @@ export default class DevTool {
       }
 
       this.request = axios.create(axiosOptions)
-
-    } else if (this.options.devToolCli) {
-      this.command = async (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol) => {
-        const code = await spawnPromisify(this.options.devToolCli, params, options, stdout, killToken)
-        if (code !== 0) {
-          return Promise.reject(new Error(`Command ${params} fail, error code: ${code}`))
-        }
-      }
     }
   }
 
@@ -77,38 +70,20 @@ export default class DevTool {
    * @param qrcodeCallback 二维码处理回调
    */
   public async login (qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
-    const task = async (statsFile) => {
-      if (this.request) {
-        const params = {
-          format: 'base64',
-          resultoutput: statsFile
-        }
+    const { uid, qrcodePath } = this.options
+    const qrcodeFile = path.join(qrcodePath, uid)
 
-        const response = await this.request.get('/login', { params })
-        const { data: qrcode } = response
-        if (!/^data:image\/jpeg;base64/.test(qrcode)) {
-          return Promise.reject(new Error('QRcode is not a base64 data'))
-        }
+    fs.ensureFileSync(qrcodeFile)
+    this.watchFile(qrcodeFile).then((qrcode: Buffer) => qrcodeCallback(qrcode))
 
-        qrcodeCallback(qrcode)
+    const task = (statsFile: string, killToken: symbol) => {
+      const params = [
+        '--login',
+        '--login-qr-output', `image@${qrcodeFile}`,
+        '--login-result-output', `${statsFile}`
+      ]
 
-      } else if (this.command) {
-        const { uid, qrcodePath } = this.options
-        const qrcodeFile = path.join(qrcodePath, uid)
-
-        fs.ensureDirSync(qrcodePath)
-
-        const params = [
-          '--login',
-          '--login-qr-output', `base64@${qrcodeFile}`,
-          '--login-result-output', `${statsFile}`
-        ]
-
-        await this.command(params, null, null)
-
-        let qrcode = fs.readFileSync(qrcodeFile).toString()
-        qrcodeCallback(qrcode)
-      }
+      return this.command(params, null, null, killToken)
     }
 
     const response = await this.execute(task)
@@ -312,25 +287,41 @@ export default class DevTool {
     }
   }
 
-  private async execute (task: (statsFile: string) => void): Promise<any> {
+  public destory () {
+    let warders = this.warders.splice(0)
+    warders.forEach((warder) => warder.kill())
+
+    this.options = undefined
+    this.request = undefined
+    this.warders = undefined
+  }
+
+  private async execute (task: (statsFile: string, killToken: symbol) => Promise<any>) {
     const { tempPath, uid } = this.options
-    const statsFile = path.join(tempPath, `./stats/${uid}.json`)
+
+    let statsFile = path.join(tempPath, `./stats/${uid}.json`)
     fs.ensureFileSync(statsFile)
 
-    let promise = this.watchFile(statsFile)
-    await task(statsFile)
+    let killToken = genKillToken()
+    let catchError = (error) => {
+      this.kill(killToken)
+      return Promise.reject(error)
+    }
 
-    let content = await promise
+    let statsPromise = this.watchFile(statsFile, killToken)
+    let excePromise = task(statsFile, killToken)
+    let [content] = await Promise.all([statsPromise, excePromise]).catch(catchError)
     return JSON.parse(content.toString())
   }
 
-  private watchFile (file: string): Promise<Buffer> {
+  private watchFile (file: string, killToken: symbol = genKillToken()): Promise<Buffer> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not exists`))
     }
 
-    return new Promise((resolve, reject) => {
-      let handle = function handle (eventType: string) {
+    let watcher
+    let promise: Promise<Buffer> = new Promise((resolve, reject) => {
+      let handle = (eventType: string) => {
         switch (eventType) {
           case 'change': {
             watcher.close()
@@ -346,7 +337,69 @@ export default class DevTool {
         }
       }
 
-      let watcher = fs.watch(file, { persistent: true }, handle)
+      watcher = fs.watch(file, { persistent: true }, handle)
     })
+
+    let kill = () => watcher && watcher.close()
+    this.setTimeout(promise, killToken, kill)
+
+    return promise
+  }
+
+  private command (params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken: symbol = genKillToken()): Promise<any> {
+    const { devToolCli } = this.options
+
+    let promise = this.spawn(devToolCli, params, options, stdout, killToken)
+    let kill = () => killProcess(killToken)
+
+    return this.setTimeout(promise, killToken, kill)
+  }
+
+  private async setTimeout (promise: Promise<any>, killToken: symbol, kill: () => void, timeout: number = 30e3): Promise<any> {
+    return new Promise(async (resolve, reject) => {
+      let timer = () => {
+        this.kill(killToken)
+
+        let error = new Error('Command Timeout') as CommandError
+        error.code = -408
+
+        reject(error)
+      }
+
+      let timeId = setTimeout(timer, timeout)
+      this.warders.push({ token: killToken, kill })
+
+      try {
+        let response = await promise
+        clearTimeout(timeId)
+        resolve(response)
+
+      } catch (error) {
+        clearTimeout(timeId)
+        reject(error)
+      }
+    })
+  }
+
+  private async spawn (command?: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: symbol): Promise<any> {
+    const code = await spawnPromisify(command, params, options, stdout, killToken)
+
+    if (code !== 0) {
+      let error = new Error(`Command ${command} ${params.join(' ')} fail, error code: ${code}`) as CommandError
+      error.code = code
+
+      return Promise.reject(error)
+    }
+
+    return code
+  }
+
+  private kill (killToken?: Symbol) {
+    let index = this.warders.findIndex(({ token }) => token === killToken)
+
+    if (index !== -1) {
+      this.warders[index].kill()
+      this.warders.splice(index, 1)
+    }
   }
 }

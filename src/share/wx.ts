@@ -1,5 +1,5 @@
-import * as fs from 'fs-extra'
-import * as path from 'path'
+import fs = require('fs-extra')
+import path = require('path')
 
 export const findRootFolder = (folder: string): string => {
   let projFile = path.join(folder, 'project.config.json')
