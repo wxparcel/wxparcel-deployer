@@ -20,14 +20,24 @@ export default class Server {
 
     const promise = command()
     this.pushQueue(promise)
-
     await promise
-    let index = this.queue.indexOf(promise)
-    this.queue.splice(index, 1)
   }
 
   public pushQueue (...promises: Array<Promise<void>>) {
+    let remove = (promise) => {
+      if (promise instanceof Promise) {
+        promise.finally(this.removeQueue.bind(this, promise))
+        return true
+      }
+    }
+
+    promises = promises.filter(remove)
     this.queue.push(...promises)
+  }
+
+  public removeQueue (promise: Promise<void>) {
+    let index = this.queue.indexOf(promise)
+    this.queue.splice(index, 1)
   }
 
   public logger (uid: string): (message: string) => void {

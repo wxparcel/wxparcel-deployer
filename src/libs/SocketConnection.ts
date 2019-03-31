@@ -1,4 +1,5 @@
 import assign = require('lodash/assign')
+import remove = require('lodash/remove')
 import { Socket } from 'net'
 
 export default class SocketConnection {
@@ -16,8 +17,18 @@ export default class SocketConnection {
     : this.register()
   }
 
-  public on (eventType: string, handle: (data: any, socket: SocketConnection) => void) {
+  public on (eventType: string, handle: (data: any, socket: SocketConnection) => void): void {
     this.listeners.push({ eventType, handle })
+  }
+
+  public off (eventType: string, handle?: (data: any, socket: SocketConnection) => void): void {
+    remove(this.listeners, (item) => {
+      if (item.eventType === eventType) {
+        return handle ? handle === item.handle : true
+      }
+
+      return false
+    })
   }
 
   public send (eventType: string, data?: any) {
@@ -45,7 +56,7 @@ export default class SocketConnection {
     this.trigger('destroy')
 
     this.socket.removeAllListeners()
-    this.socket.pause()
+    this.socket.destroy()
     this.listeners.splice(0)
 
     this.socket = undefined
