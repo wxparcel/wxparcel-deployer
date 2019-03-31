@@ -35,6 +35,9 @@ export interface LoggerOptions {
   type?: keyof typeof LogTypes
 }
 
+// Options
+// --------------
+
 export interface BaseOptions {
   uid?: string
   tempPath?: string
