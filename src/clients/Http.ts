@@ -25,7 +25,7 @@ export default class Http extends Base {
     }
 
     this.request = axios.create(axiosOptions)
-    this.request.interceptors.response.use(async (response: AxiosResponse) => response, (rejection: AxiosError) => {
+    this.request.interceptors.response.use((response: AxiosResponse) => response, (rejection: AxiosError) => {
       let { response } = rejection
       if (!response) {
         return Promise.reject(new Error('The request could not be sent, please check the network status or server status'))
@@ -44,7 +44,10 @@ export default class Http extends Base {
 
     await this.compress(folder, zipFile)
     let datas = { appid, version, message, compileType, libVersion, projectname: decodeURIComponent(projectname) }
-    const response = await this.upload('/upload', zipFile, datas)
+    const response = await this.upload('/upload', zipFile, datas).catch((error) => {
+      fs.removeSync(zipFile)
+      return Promise.reject(error)
+    })
 
     fs.removeSync(zipFile)
     return response
@@ -71,10 +74,7 @@ export default class Http extends Base {
       forEach(Object.assign({ uid }, data), (value, name) => formData.append(name, value))
 
       const catchError = (error) => {
-        let { message } = error
-        stdoutServ.error(message)
         reject(error)
-
         return Promise.reject(error)
       }
 

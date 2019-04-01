@@ -24,32 +24,39 @@ export default class Socket extends EventEmitter {
     this.socket.carry({ uid })
   }
 
-  private async connectServer (port: number = 3000, host: string = ip.address()): Promise<Connection> {
+  private connectServer (port: number = 3000, host: string = ip.address()): Promise<Connection> {
     let retrySeconds = 3
     let retryTimes = 3
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const { uid } = this.options
       const socket = net.createConnection(port, host)
-
       const client = new Connection(socket)
-      client.carry({ uid })
+
+      const complete = () => {
+        stdoutServ.ok(`Connected server ${host}:${port} successfully`)
+        client.off('close', reConnect)
+
+        client.carry({ uid })
+        resolve(client)
+      }
+
+      const catchError = (error) => {
+        stdoutServ.error(error)
+        reject(error)
+      }
 
       const reConnect = () => {
         stdoutServ.warn(`Disconnect, reconnect after ${retrySeconds} seconds`)
+
         if (0 < retryTimes --) {
           setTimeout(() => this.connectServer(port, host), retrySeconds * 1e3)
         }
       }
 
-      const complete = () => {
-        stdoutServ.ok(`Connected server ${host}:${port} successfully`)
-        client.off('destroy', reConnect)
-        resolve(client)
-      }
-
-      client.on('connected', complete)
-      client.on('destroy', reConnect)
+      client.on('connect', complete)
+      client.on('error', catchError)
+      client.on('close', reConnect)
     })
   }
 

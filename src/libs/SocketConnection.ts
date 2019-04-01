@@ -1,34 +1,18 @@
-import assign = require('lodash/assign')
-import remove = require('lodash/remove')
 import { Socket } from 'net'
+import { EventEmitter } from 'events'
+import assign = require('lodash/assign')
 
-export default class SocketConnection {
+export default class SocketConnection extends EventEmitter {
   private socket: Socket
-  private listeners: Array<{ eventType: string | symbol, handle: (data: any, socket: SocketConnection) => void}>
   private belongings: { [key: string]: any }
 
   constructor (socket: Socket) {
+    super()
+
     this.socket = socket
-    this.listeners = []
     this.belongings = {}
 
-    this.socket.connecting === true
-    ? this.socket.on('connect', this.register.bind(this))
-    : this.register()
-  }
-
-  public on (eventType: string, handle: (data: any, socket: SocketConnection) => void): void {
-    this.listeners.push({ eventType, handle })
-  }
-
-  public off (eventType: string, handle?: (data: any, socket: SocketConnection) => void): void {
-    remove(this.listeners, (item) => {
-      if (item.eventType === eventType) {
-        return handle ? handle === item.handle : true
-      }
-
-      return false
-    })
+    this.listen()
   }
 
   public send (eventType: string, data?: any) {
@@ -41,11 +25,7 @@ export default class SocketConnection {
   }
 
   public trigger (eventType: string, data?: any) {
-    this.listeners.forEach((item) => {
-      if (eventType === item.eventType) {
-        item.handle(data, this)
-      }
-    })
+    this.emit(eventType, data)
   }
 
   public carry (datas: { [key: string]: any }) {
@@ -53,18 +33,24 @@ export default class SocketConnection {
   }
 
   public destroy () {
-    this.trigger('destroy')
+    this.removeAllListeners()
 
     this.socket.removeAllListeners()
     this.socket.destroy()
-    this.listeners.splice(0)
 
     this.socket = undefined
     this.listeners = undefined
   }
 
-  private register () {
-    this.trigger('connected')
+  private listen () {
+    this.socket.on('connect', () => this.emit('connect'))
+    this.socket.on('data', (data: Buffer) => this.emit('data', data))
+    this.socket.on('drain', () => this.emit('drain'))
+    this.socket.on('timeout', () => this.emit('timeout'))
+    this.socket.on('lookup', (error: Error, address: string, family: string | number, host: string) => this.emit('lookup', error, address, family, host))
+    this.socket.on('error', (error: Error) => this.emit('error', error))
+    this.socket.on('end', () => this.emit('end'))
+    this.socket.on('close', (hadError: boolean) => this.emit('close', hadError))
 
     this.socket.on('data', this.pipe.bind(this))
     this.socket.on('close', this.destroy.bind(this))

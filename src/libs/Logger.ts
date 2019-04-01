@@ -6,6 +6,7 @@ import { LogTypes, LoggerOptions } from '../typings'
 export default class Logger {
   private type: keyof typeof LogTypes | Array<keyof typeof LogTypes>
   private silence: boolean
+  private detailed: boolean
   private loadingBar: any
 
   get useConsole () {
@@ -21,12 +22,21 @@ export default class Logger {
   }
 
   constructor (options?: LoggerOptions) {
+    this.type = 'console'
     this.silence = process.argv.findIndex((argv) => argv === '--quiet' || argv === '--silence') !== -1
-    options && this.configure(options)
+    this.detailed = process.argv.findIndex((argv) => argv === '--develop') !== -1
+
+    this.configure(options)
   }
 
-  public configure (options: LoggerOptions): void {
-    this.type = options.type || 'console'
+  public configure (options: LoggerOptions = {}): void {
+    if (options.hasOwnProperty('type')) {
+      this.type = options.type
+    }
+
+    if (options.hasOwnProperty('detailed')) {
+      this.detailed = options.detailed
+    }
   }
 
   public loading (value: number, total: number, message: string = ''): any {
@@ -73,6 +83,10 @@ export default class Logger {
 
     if (typeof color === 'function') {
       message.message = color(message.message)
+    }
+
+    if (this.detailed !== true) {
+      return this.log(message.message)
     }
 
     let pe = new PrettyError()

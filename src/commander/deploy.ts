@@ -46,7 +46,11 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
   let folder = options.folder || globalOptions.rootPath
   if (options.hasOwnProperty('socket')) {
     let client = new SocketClient(globalOptions)
-    await client.connect()
+    await client.connect().catch((error) => {
+      stdoutServ.error(error)
+      process.exit(3)
+    })
+
     client.on('destroy', () => stdoutServ.error('Connecting closed'))
     client.destroy()
 
@@ -58,7 +62,10 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
 
     stdoutServ.clear()
     stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
-    await client.uploadProject(folder, version, message)
+    await client.uploadProject(folder, version, message).catch((error) => {
+      stdoutServ.error(error)
+      process.exit(3)
+    })
 
     stdoutServ.ok(`Project ${chalk.bold(folder)} upload completed`)
   }

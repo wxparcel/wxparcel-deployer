@@ -5,7 +5,8 @@ import './commander/deploy'
 
 program
 .version(pkg.version, '-v, --version')
-.option('-q, --quiet', 'do not print any information')
+.option('--develop', 'set develop mode')
+.option('--quiet, --silence', 'do not print any information')
 
 const params = process.argv
 !params.slice(2).length && program.outputHelp()

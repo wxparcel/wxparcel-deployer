@@ -34,6 +34,7 @@ export enum LogTypes {
 
 export interface LoggerOptions {
   type?: keyof typeof LogTypes
+  detailed?: boolean
 }
 
 // Options
@@ -44,6 +45,7 @@ export interface BaseOptions {
   tempPath?: string
   maxFileSize?: number
   logType?: keyof typeof LogTypes
+  isDevelop?: boolean
 }
 export interface ServerBaseOptions extends BaseOptions {
   uploadPath?: string

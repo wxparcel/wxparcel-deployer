@@ -15,6 +15,7 @@ export class OptionManager {
   public maxFileSize: number
   public isOSX: boolean
   public isWin: boolean
+  public isDevelop: boolean
 
   constructor (options: BaseOptions) {
     this.uid = options.uid || shortid.generate()
@@ -25,12 +26,18 @@ export class OptionManager {
     this.maxFileSize = 1024 * 1024 * 8
     this.isOSX = 'darwin' === os.platform()
     this.isWin = 'win32' === os.platform()
+    this.isDevelop = process.argv.findIndex((argv) => argv === '--develop') !== -1
+
     this.configure(options)
   }
 
   public configure (options: BaseOptions) {
     if (options.hasOwnProperty('maxFileSize')) {
       this.maxFileSize = options.maxFileSize
+    }
+
+    if (options.hasOwnProperty('isDevelop')) {
+      this.isDevelop = options.isDevelop
     }
   }
 }
