@@ -1,6 +1,6 @@
 {
   "name": "wxparcel-deployer",
-  "version": "1.0.0-alpha.2.0",
+  "version": "1.0.0-alpha.2.1",
   "bin": "./bin/cli",
   "main": "./libs/index.js",
   "license": "MIT",
