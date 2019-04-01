@@ -24,7 +24,7 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
 
   let globalOptions = new ClientOptions({
     ...defaultOptions,
-    deployServer: options.server
+    server: options.server
   })
 
   let logger = new Logger({ type: globalOptions.logType })
