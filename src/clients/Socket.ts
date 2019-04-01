@@ -60,6 +60,17 @@ export default class Socket extends EventEmitter {
     })
   }
 
+  public status (): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const status = (response: StandardResponse) => {
+        this.intercept(response).then(resolve).catch(reject)
+      }
+
+      this.socket.once('status', status)
+      this.socket.send('status')
+    })
+  }
+
   public login (): Promise<void> {
     return new Promise((resolve, reject) => {
       const qrcode = async (qrcode: Buffer) => {
@@ -81,11 +92,11 @@ export default class Socket extends EventEmitter {
       }
 
       const login = (response: StandardResponse) => {
-        this.resolveError(response).then(resolve).catch(reject)
+        this.intercept(response).then(resolve).catch(reject)
       }
 
-      this.socket.on('qrcode', qrcode)
-      this.socket.on('login', login)
+      this.socket.once('qrcode', qrcode)
+      this.socket.once('login', login)
       this.socket.send('login')
     })
   }
@@ -105,7 +116,7 @@ export default class Socket extends EventEmitter {
     this.socket = undefined
   }
 
-  private resolveError (response: StandardResponse): Promise<any> {
+  private intercept (response: StandardResponse): Promise<any> {
     const { status, code, message } = response
     if (200 <= status && status < 400 && code === 0) {
       return Promise.resolve(response)

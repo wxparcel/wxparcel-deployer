@@ -16,7 +16,9 @@ export default class Socket extends Base {
     this.options = options
     this.devTool = new DevTool(this.options)
     this.server = new Server()
+
     this.server.onMessage('login', this.login.bind(this))
+    this.server.onMessage('status', this.status.bind(this))
   }
 
   public start (): Promise<void> {
@@ -26,20 +28,23 @@ export default class Socket extends Base {
     })
   }
 
-  public async login (socket: Connection) {
-    const task = async () => {
+  public async status (socket: Connection): Promise<void> {
+    this.sendJson(socket, 'status', { message: 'okaya, server is running.' })
+  }
+
+  public async login (socket: Connection): Promise<void> {
+    const task = () => {
       const qrcode = (qrcode: Buffer) => socket.send('qrcode', qrcode)
       return this.devTool.login(qrcode)
     }
 
-    try {
-      await this.execute(task)
-      this.sendJson(socket, 'login')
-
-    } catch (error) {
+    await this.execute(task).catch((error) => {
       let { status, message } = this.resolveCommandError(error)
       this.sendJson(socket, 'login', { status, message })
-    }
+      return Promise.reject(error)
+    })
+
+    this.sendJson(socket, 'login')
   }
 
   public destory (): void {
