@@ -14,7 +14,12 @@ import { ServerCLIOptions } from '../typings'
 export const server = async (options: ServerCLIOptions = {}) => {
   let { config: configFile, port } = options
   if (!port) {
-    port = await portscanner.findAPortNotInUse(3000, 8000, ip.address())
+    port = await portscanner.findAPortNotInUse(3000, 8000, ip.address()).catch((error) => {
+      stdoutServ.error(error)
+      process.exit(3)
+
+      return Promise.reject(error)
+    })
   }
 
   let defaultOptions: any = {}
@@ -45,7 +50,12 @@ export const server = async (options: ServerCLIOptions = {}) => {
     ? new SocketServer(globalOptions)
     : new HttpServer(globalOptions)
 
-  await server.start()
+  await server.start().catch((error) => {
+    stdoutServ.error(error)
+    process.exit(3)
+
+    return Promise.reject(error)
+  })
 
   stdoutServ.clear()
   stdoutServ.log(chalk.gray.bold('WXParcel Server'))

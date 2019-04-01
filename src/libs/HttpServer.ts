@@ -55,12 +55,15 @@ export default class HttpServer {
     this.routes.push(router)
   }
 
-  public listen (...args): void {
+  public listen (port: number, hostname?: string, backlog?: number): Promise<void> {
     if (!this.server) {
-      throw new Error('Server is not running')
+      return Promise.reject(new Error('Server is not running'))
     }
 
-    this.server.listen(...args)
+    return new Promise((resolve, reject) => {
+      this.server.on('error', reject)
+      this.server.listen(port, hostname, backlog, resolve)
+    })
   }
 
   public close (): void {

@@ -21,11 +21,9 @@ export default class Socket extends Base {
     this.server.onMessage('status', this.status.bind(this))
   }
 
-  public start (): Promise<void> {
-    return new Promise((resolve) => {
-      const { port } = this.options
-      this.server.listen(port, resolve)
-    })
+  public async start (): Promise<void> {
+    const { port } = this.options
+    return this.server.listen(port)
   }
 
   public async status (socket: Connection): Promise<void> {
