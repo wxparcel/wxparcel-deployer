@@ -309,17 +309,16 @@ export default class DevTool {
     let killToken = genKillToken()
     let catchError = (error) => {
       this.kill(killToken)
-      return Promise.reject(error)
-    }
 
-    let removeStats = () => {
       fs.removeSync(statsFile)
+      return Promise.reject(error)
     }
 
     let statsPromise = this.watchFile(statsFile, killToken)
     let excePromise = task(statsFile, killToken)
-    let [content] = await Promise.all([statsPromise, excePromise]).catch(catchError).finally(removeStats)
+    let [content] = await Promise.all([statsPromise, excePromise]).catch(catchError)
 
+    fs.removeSync(statsFile)
     return JSON.parse(content.toString())
   }
 

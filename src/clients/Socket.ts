@@ -18,7 +18,7 @@ export default class Socket extends EventEmitter {
   }
 
   public async connect (): Promise<void> {
-    const { uid, server } = this.options
+    const { uid, deployServer: server } = this.options
     const { port, hostname } = new URL(server)
     this.socket = await this.connectServer(Number(port), hostname)
     this.socket.carry({ uid })

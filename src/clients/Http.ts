@@ -18,7 +18,7 @@ export default class Http extends Base {
 
     this.options = options
 
-    const { server } = this.options
+    const { deployServer: server } = this.options
     const serverUrl = /^https?:\/\//.test(server) ? server : `http://${server}`
     const axiosOptions: AxiosRequestConfig = {
       baseURL: serverUrl

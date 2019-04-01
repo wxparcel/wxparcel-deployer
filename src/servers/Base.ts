@@ -24,14 +24,17 @@ export default class Server {
   }
 
   public pushQueue (...promises: Array<Promise<void>>) {
-    let remove = (promise) => {
+    let filterAndBindings = (promise) => {
       if (promise instanceof Promise) {
-        promise.finally(this.removeQueue.bind(this, promise))
+        let removeQueue = this.removeQueue.bind(this, promise)
+        promise.then(removeQueue).catch(removeQueue)
         return true
       }
+
+      return false
     }
 
-    promises = promises.filter(remove)
+    promises = promises.filter(filterAndBindings)
     this.queue.push(...promises)
   }
 
