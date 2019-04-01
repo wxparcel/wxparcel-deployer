@@ -74,12 +74,16 @@ export default class DevTool {
     const qrcodeFile = path.join(qrcodePath, uid)
 
     fs.ensureFileSync(qrcodeFile)
-    this.watchFile(qrcodeFile).then((qrcode: Buffer) => qrcodeCallback(qrcode))
+
+    this.watchFile(qrcodeFile).then((qrcode: Buffer) => {
+      qrcodeCallback(qrcode)
+      fs.removeSync(qrcodeFile)
+    })
 
     const task = (statsFile: string, killToken: symbol) => {
       const params = [
         '--login',
-        '--login-qr-output', `image@${qrcodeFile}`,
+        '--login-qr-output', `base64@${qrcodeFile}`,
         '--login-result-output', `${statsFile}`
       ]
 
@@ -308,9 +312,14 @@ export default class DevTool {
       return Promise.reject(error)
     }
 
+    let removeStats = () => {
+      fs.removeSync(statsFile)
+    }
+
     let statsPromise = this.watchFile(statsFile, killToken)
     let excePromise = task(statsFile, killToken)
-    let [content] = await Promise.all([statsPromise, excePromise]).catch(catchError)
+    let [content] = await Promise.all([statsPromise, excePromise]).catch(catchError).finally(removeStats)
+
     return JSON.parse(content.toString())
   }
 
