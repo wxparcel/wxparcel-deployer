@@ -1,14 +1,14 @@
 import http = require('http')
 import pathToRegexp = require('path-to-regexp')
 import chalk from 'chalk'
-import HttpConnection from './HttpConnection'
-import stdoutServ from '../services/stdout'
-import { Server, IncomingMessage, ServerResponse } from 'http'
-import { HTTPServerRoute, HTTPServerRouteHandler } from '../typings'
+import Connection from './Connection'
+import stdoutServ from '../../services/stdout'
+import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http'
+import { HTTPServerRoute, HTTPServerRouteHandler } from '../../typings'
 
-export default class HttpServer {
+export default class Server {
   private routes: Array<HTTPServerRoute>
-  public server: Server
+  public server: HttpServer
 
   constructor () {
     this.routes = []
@@ -19,7 +19,7 @@ export default class HttpServer {
     methods = methods || 'GET'
     methods = Array.isArray(methods) ? methods : [methods]
 
-    const router = async (connection: HttpConnection, clientRequest) => {
+    const router = async (connection: Connection, clientRequest) => {
       const { url, method } = clientRequest
       const regexp = pathToRegexp(route)
       const params = regexp.exec(url)
@@ -79,7 +79,7 @@ export default class HttpServer {
       return
     }
 
-    const connection = new HttpConnection(request, response)
+    const connection = new Connection(request, response)
 
     try {
       const hit = await this.waterfall(this.routes)(connection, request, response)

@@ -5,13 +5,13 @@ import isPlainObject = require('lodash/isPlainObject')
 import forEach = require('lodash/forEach')
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import FormData = require('form-data')
-import { ClientOptions } from '../libs/OptionManager'
-import Base from './Base'
-import stdoutServ from '../services/stdout'
-import { unitSize } from '../share/fns'
-import { CommandError } from '../typings'
+import { ClientOptions } from '../OptionManager'
+import Client from '../Client'
+import stdoutServ from '../../services/stdout'
+import { unitSize } from '../../share/fns'
+import { CommandError } from '../../typings'
 
-export default class Http extends Base {
+export default class HttpClient extends Client {
   private options: ClientOptions
   private request: AxiosInstance
 

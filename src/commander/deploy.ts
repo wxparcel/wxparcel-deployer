@@ -4,8 +4,8 @@ import program = require('commander')
 import chalk from 'chalk'
 import Logger from '../libs/Logger'
 import { ClientOptions } from '../libs/OptionManager'
-import HttpClient from '../clients/Http'
-import SocketClient from '../clients/Socket'
+import HttpClient from '../libs/client/Http'
+import SocketClient from '../libs/client/Socket'
 import stdoutServ from '../services/stdout'
 import { ClientCLIOptions } from '../typings'
 

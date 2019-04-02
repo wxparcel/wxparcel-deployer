@@ -2,7 +2,7 @@ import { Socket } from 'net'
 import { EventEmitter } from 'events'
 import assign = require('lodash/assign')
 
-export default class SocketConnection extends EventEmitter {
+export default class Connection extends EventEmitter {
   private socket: Socket
   private belongings: { [key: string]: any }
 

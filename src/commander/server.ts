@@ -6,8 +6,8 @@ import chalk from 'chalk'
 import { ServerOptions } from '../libs/OptionManager'
 import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
-import HttpServer from '../servers/Http'
-import SocketServer from '../servers/Socket'
+import HttpServ from '../libs/service/Http'
+import SocketServ from '../libs/service/Socket'
 import * as pkg from '../../package.json'
 import { ServerCLIOptions } from '../typings'
 
@@ -46,9 +46,9 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const logger = new Logger({ type: globalOptions.logType })
   logger.listen(stdoutServ)
 
-  let server = options.hasOwnProperty('socket')
-    ? new SocketServer(globalOptions)
-    : new HttpServer(globalOptions)
+  const server = options.hasOwnProperty('socket')
+    ? new SocketServ(globalOptions)
+    : new HttpServ(globalOptions)
 
   await server.start().catch((error) => {
     stdoutServ.error(error)

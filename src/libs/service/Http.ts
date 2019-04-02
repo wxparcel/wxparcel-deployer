@@ -2,26 +2,26 @@ import path = require('path')
 import chalk from 'chalk'
 import { IncomingForm } from 'formidable'
 import forEach = require('lodash/forEach')
-import { ServerOptions } from '../libs/OptionManager'
-import DevTool from '../libs/DevTool'
-import Connection from '../libs/HttpConnection'
-import Server from '../libs/HttpServer'
-import { ensureDirs, removeFiles, unzip } from '../share/fns'
-import Base from './Base'
+import { ServerOptions } from '../OptionManager'
+import DevTool from '../DevTool'
+import Connection from '../http/Connection'
+import HttpServer from '../http/Server'
+import Service from '../Service'
+import { ensureDirs, removeFiles, unzip } from '../../share/fns'
 import { IncomingMessage } from 'http'
-import { CommandError, StandardResponse } from '../typings'
+import { CommandError, StandardResponse } from '../../typings'
 
-export default class Http extends Base {
+export default class HttpService extends Service {
   private options: ServerOptions
   private devTool: DevTool
-  private server: Server
+  private server: HttpServer
 
   constructor (options: ServerOptions) {
     super()
 
     this.options = options
     this.devTool = new DevTool(this.options)
-    this.server = new Server()
+    this.server = new HttpServer()
     this.server.route('GET', '/status', this.status.bind(this))
     this.server.route('POST', '/upload', this.upload.bind(this))
   }

@@ -1,21 +1,21 @@
-import { ServerOptions } from '../libs/OptionManager'
-import Connection from '../libs/SocketConnection'
-import Server from '../libs/SocketServer'
-import DevTool from '../libs/DevTool'
-import Base from './Base'
-import { StandardResponse } from '../typings'
+import { ServerOptions } from '../OptionManager'
+import Connection from '../socket/Connection'
+import SocketServer from '../socket/Server'
+import Service from '../Service'
+import DevTool from '../DevTool'
+import { StandardResponse } from '../../typings'
 
-export default class Socket extends Base {
+export default class SocketService extends Service {
   private options: ServerOptions
   private devTool: DevTool
-  private server: Server
+  private server: SocketServer
 
   constructor (options: ServerOptions) {
     super()
 
     this.options = options
     this.devTool = new DevTool(this.options)
-    this.server = new Server()
+    this.server = new SocketServer()
 
     this.server.onMessage('login', this.login.bind(this))
     this.server.onMessage('status', this.status.bind(this))

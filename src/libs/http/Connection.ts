@@ -1,7 +1,7 @@
 import { IncomingMessage, ServerResponse } from 'http'
-import { StandardResponse } from '../typings'
+import { StandardResponse } from '../../typings'
 
-export default class HttpConnection {
+export default class Connection {
   public request: IncomingMessage
   public response: ServerResponse
   public head: { [key: string]: string }

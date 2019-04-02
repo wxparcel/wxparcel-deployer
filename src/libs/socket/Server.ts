@@ -1,12 +1,12 @@
 import chalk from 'chalk'
 import net = require('net')
-import Connection from './SocketConnection'
-import stdoutServ from '../services/stdout'
-import { Server, Socket } from 'net'
+import Connection from './Connection'
+import stdoutServ from '../../services/stdout'
+import { Server as NetServer, Socket } from 'net'
 
-export default class SocketServer {
+export default class Server {
   private listeners: Array<{ event: string, handle: (socket: Connection) => Promise<void> }>
-  public server: Server
+  public server: NetServer
 
   constructor () {
     this.listeners = []
