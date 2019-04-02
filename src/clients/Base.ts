@@ -32,11 +32,11 @@ export default class Client {
       const writeStream = fs.createWriteStream(zipFile)
       writeStream.once('error', reject).once('close', resolve)
 
-      zip.generateNodeStream({ streamFiles: true })
-        .pipe(writeStream)
-        .once('finish', () => writeStream.close())
-        .once('end', () => writeStream.close())
-        .once('error', reject)
+      zip
+      .generateNodeStream({ streamFiles: true })
+      .pipe(writeStream)
+      .once('finish', () => writeStream.close())
+      .once('error', reject)
     })
   }
 
