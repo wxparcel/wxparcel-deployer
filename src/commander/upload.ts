@@ -9,7 +9,7 @@ import SocketClient from '../libs/client/Socket'
 import stdoutServ from '../services/stdout'
 import { ClientCLIOptions } from '../typings'
 
-export const deploy = async (options: ClientCLIOptions = {}) => {
+export const upload = async (options: ClientCLIOptions = {}) => {
   let { config: configFile, version, message } = options
   let defaultOptions: any = {}
 
@@ -73,12 +73,12 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
 }
 
 program
-.command('deploy')
-.description('deploy wx miniprogram')
+.command('upload')
+.description('upload project to wechat cloud.')
 .option('-c, --config <config>', 'settting config file')
-.option('-v, --version <version>', 'setting deploy version')
-.option('-d, --message <message>', 'setting deploy message')
+.option('-v, --version <version>', 'setting upload version')
+.option('-d, --message <message>', 'setting upload message')
 .option('--folder <folder>', 'setting wx mini program project folder path')
-.option('--server <server>', 'setting deploy server url, default 0.0.0.0:3000')
-.option('--socket', 'setting deploy server url, default 0.0.0.0:3000')
-.action(deploy)
+.option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
+.option('--socket', 'setting upload server url, default 0.0.0.0:3000')
+.action(upload)
