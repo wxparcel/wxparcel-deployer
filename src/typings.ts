@@ -1,4 +1,3 @@
-import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
 import HttpConnection from './libs/http/Connection'
 
 export type Stdout = (data: Buffer, type?: string) => void
@@ -22,7 +21,7 @@ export interface StandardResponse {
   message?: string
 }
 
-export type HTTPServerRoute = (connection: HttpConnection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
+export type HTTPServerRoute = (connection: HttpConnection) => Promise<any>
 export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
 
 // logger

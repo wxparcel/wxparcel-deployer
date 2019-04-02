@@ -57,11 +57,11 @@ export default class Connection {
       return
     }
 
-    let body = JSON.stringify({ ...response, status: this.status })
+    let body = JSON.stringify({ status: this.status, ...response })
     this.writeHead('Content-Type', 'application/json;charset=utf-8')
     this.writeHead('Content-Length', body.length + '')
 
-    this.response.writeHead(this.status, this.head)
+    this.response.writeHead(response.status || this.status, this.head)
     this.response.end(body)
     this.flush = true
   }

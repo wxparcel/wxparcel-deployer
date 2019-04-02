@@ -2,28 +2,33 @@ import path = require('path')
 import chalk from 'chalk'
 import { IncomingForm } from 'formidable'
 import forEach = require('lodash/forEach')
-import { ServerOptions } from '../OptionManager'
-import DevTool from '../DevTool'
-import Connection from '../http/Connection'
-import HttpServer from '../http/Server'
-import Service from '../Service'
-import { ensureDirs, removeFiles, unzip } from '../../share/fns'
+import { ServerOptions } from '../libs/OptionManager'
+import DevTool from '../libs/DevTool'
+import Connection from '../libs/http/Connection'
+import HttpServer from '../libs/http/Server'
+import Service from '../libs/Service'
+import { ensureDirs, removeFiles, unzip } from '../share/fns'
 import { IncomingMessage } from 'http'
-import { CommandError, StandardResponse } from '../../typings'
+import { CommandError, StandardResponse } from '../typings'
 
 export default class HttpService extends Service {
   private options: ServerOptions
   private devTool: DevTool
   private server: HttpServer
+  private promises: { [key: string ]: Promise<any> }
 
   constructor (options: ServerOptions) {
     super()
 
+    this.promises = {}
     this.options = options
     this.devTool = new DevTool(this.options)
     this.server = new HttpServer()
+
     this.server.route('GET', '/status', this.status.bind(this))
     this.server.route('POST', '/upload', this.upload.bind(this))
+    this.server.route('GET', '/login', this.login.bind(this))
+    this.server.route('GET', '/checkin', this.checkin.bind(this))
   }
 
   public async start (): Promise<void> {
@@ -41,8 +46,7 @@ export default class HttpService extends Service {
     await ensureDirs(uploadPath, deployPath)
 
     const { file: uploadFile, uid, appid, version, message, compileType, libVersion, projectname } = await this.transfer(request)
-    const log = this.logger(uid)
-
+    const log = (message: string) => this.log(message, uid || 'anonymous')
     log(`Upload completed. Version ${chalk.bold(version)} Appid ${chalk.bold(appid)} CompileType ${chalk.bold(compileType)} LibVersion ${chalk.bold(libVersion)} ProjectName ${chalk.bold(projectname)}`)
 
     const uploadFileName = appid || uid || path.basename(uploadFile).replace(path.extname(uploadFile), '')
@@ -73,6 +77,57 @@ export default class HttpService extends Service {
 
     log('Upload completed')
     this.writeJson({ message: 'Upload completed' }, conn)
+  }
+
+  public async login (_: RegExpExecArray, conn: Connection): Promise<void> {
+    const command = (): Promise<any> => new Promise((resolve) => {
+      const completed = (qrcode: Buffer) => {
+        this.writeJson({ data: qrcode.toString() }, conn)
+        resolve()
+      }
+
+      const catchError = (error: CommandError) => {
+        let { status, message } = this.resolveCommandError(error)
+
+        conn.setStatus(status)
+        this.writeJson({ message }, conn)
+
+        return Promise.reject(error)
+      }
+
+      let promise = this.devTool.login(completed).catch(catchError)
+      this.promises.login = promise
+    })
+
+    await this.execute(command)
+  }
+
+  public async checkin (_: RegExpExecArray, conn: Connection): Promise<void> {
+    const { request } = conn
+    const { login: promise } = this.promises
+
+    if (!(promise instanceof Promise)) {
+      this.writeJson({ status: 401, message: 'unlogined' }, conn)
+      return
+    }
+
+    const remove = () => delete this.promises.login
+    request.once('end', remove)
+
+    const completed = () => {
+      this.writeJson({ message: 'logined success' }, conn)
+    }
+
+    const catchError = (error: CommandError) => {
+      let { status, message } = this.resolveCommandError(error)
+
+      conn.setStatus(status)
+      this.writeJson({ message }, conn)
+
+      return Promise.reject(error)
+    }
+
+    promise.then(completed).catch(catchError)
   }
 
   public destory (): void {
@@ -111,7 +166,7 @@ export default class HttpService extends Service {
   }
 
   private writeJson (content: StandardResponse, conn: Connection) {
-    let response = this.standard({ ...content, status: conn.status })
+    let response = this.standard({ status: conn.status, ...content })
     conn.writeJson(response)
   }
 }

@@ -1,7 +1,7 @@
 import program = require('commander')
 import pkg = require('../package.json')
 import './commander/server'
-import './commander/deploy'
+import './commander/upload'
 
 program
 .version(pkg.version, '-v, --version')

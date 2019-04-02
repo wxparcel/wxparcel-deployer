@@ -1,9 +1,9 @@
-import { ServerOptions } from '../OptionManager'
-import Connection from '../socket/Connection'
-import SocketServer from '../socket/Server'
-import Service from '../Service'
-import DevTool from '../DevTool'
-import { StandardResponse } from '../../typings'
+import { ServerOptions } from '../libs/OptionManager'
+import Connection from '../libs/socket/Connection'
+import SocketServer from '../libs/socket/Server'
+import Service from '../libs/Service'
+import DevTool from '../libs/DevTool'
+import { StandardResponse } from '../typings'
 
 export default class SocketService extends Service {
   private options: ServerOptions

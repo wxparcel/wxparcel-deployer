@@ -4,8 +4,8 @@ import program = require('commander')
 import chalk from 'chalk'
 import Logger from '../libs/Logger'
 import { ClientOptions } from '../libs/OptionManager'
-import HttpClient from '../libs/client/Http'
-import SocketClient from '../libs/client/Socket'
+import HttpClient from '../client/Http'
+import SocketClient from '../client/Socket'
 import stdoutServ from '../services/stdout'
 import { ClientCLIOptions } from '../typings'
 
@@ -63,7 +63,6 @@ export const upload = async (options: ClientCLIOptions = {}) => {
     stdoutServ.clear()
     stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
     await client.uploadProject(folder, version, message).catch((error) => {
-      console.log(error)
       stdoutServ.error(error)
       process.exit(3)
     })

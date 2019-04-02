@@ -8,7 +8,7 @@ import { HTTPServerRoute, HTTPServerRouteHandler } from '../../typings'
 
 export default class Server {
   private routes: Array<HTTPServerRoute>
-  public server: HttpServer
+  private server: HttpServer
 
   constructor () {
     this.routes = []
@@ -19,8 +19,8 @@ export default class Server {
     methods = methods || 'GET'
     methods = Array.isArray(methods) ? methods : [methods]
 
-    const router = async (connection: Connection, clientRequest) => {
-      const { url, method } = clientRequest
+    const router = async (connection: Connection) => {
+      const { url, method } = connection.request
       const regexp = pathToRegexp(route)
       const params = regexp.exec(url)
 
@@ -76,13 +76,14 @@ export default class Server {
 
   private async connect (request: IncomingMessage, response: ServerResponse): Promise<void> {
     if (request.url === '/favicon.ico') {
+      response.end()
       return
     }
 
     const connection = new Connection(request, response)
 
     try {
-      const hit = await this.waterfall(this.routes)(connection, request, response)
+      const hit = await this.waterfall(this.routes)(connection)
 
       if (hit !== true) {
         const { method, url } = request

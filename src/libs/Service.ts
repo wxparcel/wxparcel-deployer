@@ -43,11 +43,10 @@ export default class Server {
     this.queue.splice(index, 1)
   }
 
-  public logger (uid: string): (message: string) => void {
-    return (message) => {
-      const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
-      stdoutServ.info(`[${chalk.green.bold(uid)}] ${message} ${chalk.gray(datetime)}`)
-    }
+  public log (message: string, ...args): void {
+    const prefix = args.map((value) => `[${chalk.green.bold(value)}]`)
+    const datetime = chalk.gray(new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''))
+    stdoutServ.info(`${prefix} ${message} ${datetime}`)
   }
 
   public destory (): void {

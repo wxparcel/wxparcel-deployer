@@ -2,10 +2,10 @@ import net = require('net')
 import ip = require('ip')
 import { EventEmitter } from 'events'
 import terminalImage = require('terminal-image')
-import { ClientOptions } from '../OptionManager'
-import Connection from '../socket/Connection'
-import stdoutServ from '../../services/stdout'
-import { StandardResponse } from '../../typings'
+import { ClientOptions } from '../libs/OptionManager'
+import Connection from '../libs/socket/Connection'
+import stdoutServ from '../services/stdout'
+import { StandardResponse } from '../typings'
 
 export default class SocketClient extends EventEmitter {
   private options: ClientOptions
