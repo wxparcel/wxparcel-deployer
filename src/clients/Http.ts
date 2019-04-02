@@ -1,6 +1,7 @@
 import fs = require('fs-extra')
 import path = require('path')
 import { promisify } from 'util'
+import isPlainObject = require('lodash/isPlainObject')
 import forEach = require('lodash/forEach')
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import FormData = require('form-data')
@@ -8,6 +9,7 @@ import { ClientOptions } from '../libs/OptionManager'
 import Base from './Base'
 import stdoutServ from '../services/stdout'
 import { unitSize } from '../share/fns'
+import { CommandError } from '../typings'
 
 export default class Http extends Base {
   private options: ClientOptions
@@ -31,7 +33,14 @@ export default class Http extends Base {
         return Promise.reject(new Error('The request could not be sent, please check the network status or server status'))
       }
 
-      return Promise.reject(response.data)
+      if (isPlainObject(response.data)) {
+        let { message, ...others } = response.data
+        let error: CommandError = new Error(message)
+        Object.assign(error, others)
+        return Promise.reject(error)
+      }
+
+      return Promise.reject(new Error(response.data))
     })
   }
 
@@ -44,7 +53,7 @@ export default class Http extends Base {
 
     await this.compress(folder, zipFile)
     let datas = { appid, version, message, compileType, libVersion, projectname: decodeURIComponent(projectname) }
-    const response = await this.upload('/upload', zipFile, datas).catch((error) => {
+    const response = await this.upload('/upload', zipFile, datas).catch((error: CommandError) => {
       fs.removeSync(zipFile)
       return Promise.reject(error)
     })

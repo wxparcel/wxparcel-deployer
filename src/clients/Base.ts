@@ -30,13 +30,13 @@ export default class Client {
       fs.ensureDirSync(path.dirname(zipFile))
 
       const writeStream = fs.createWriteStream(zipFile)
-      writeStream.once('error', reject)
-      writeStream.once('close', resolve)
+      writeStream.once('error', reject).once('close', resolve)
 
-      const readStream = zip.generateNodeStream({ streamFiles: true })
-      readStream.pipe(writeStream)
-      readStream.once('error', reject)
-      readStream.once('end', () => writeStream.close())
+      zip.generateNodeStream({ streamFiles: true })
+        .pipe(writeStream)
+        .once('finish', () => writeStream.close())
+        .once('end', () => writeStream.close())
+        .once('error', reject)
     })
   }
 

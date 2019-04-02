@@ -63,6 +63,7 @@ export const deploy = async (options: ClientCLIOptions = {}) => {
     stdoutServ.clear()
     stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
     await client.uploadProject(folder, version, message).catch((error) => {
+      console.log(error)
       stdoutServ.error(error)
       process.exit(3)
     })
