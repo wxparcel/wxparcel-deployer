@@ -38,19 +38,6 @@ export default class WebSocketServer extends Service {
     this.server.on('connection', this.attachSocket.bind(this))
   }
 
-  private attachSocket (socket: Socket) {
-    const onMessage = (message: WebSocketRequestMessage) => {
-      const { action, payload } = message
-      this.events.forEach((event) => {
-        if (event.type === action) {
-          event.action(socket, action, payload)
-        }
-      })
-    }
-
-    socket.on('deploy', onMessage)
-  }
-
   public async status (_: WebSocketRequestMessage, feedback: (data?: StandardResponse) => void): Promise<void> {
     feedback({ message: 'okaya, server is running.' })
   }
@@ -70,7 +57,7 @@ export default class WebSocketServer extends Service {
     feedback({})
   }
 
-  public feedback (socket: Socket, type: string, data: StandardResponse = {}): void {
+  private feedback (socket: Socket, type: string, data: StandardResponse = {}): void {
     const params: WebSocketResponseMessage = {
       action: type,
       payload: this.standard(data)
@@ -86,6 +73,19 @@ export default class WebSocketServer extends Service {
     }
 
     this.events.push({ type, action })
+  }
+
+  private attachSocket (socket: Socket) {
+    const onMessage = (message: WebSocketRequestMessage) => {
+      const { action, payload } = message
+      this.events.forEach((event) => {
+        if (event.type === action) {
+          event.action(socket, action, payload)
+        }
+      })
+    }
+
+    socket.on('deploy', onMessage)
   }
 
   public destory (): void {
