@@ -1,5 +1,6 @@
 import net = require('net')
 import ip = require('ip')
+import fs = require('fs-extra')
 import { EventEmitter } from 'events'
 import terminalImage = require('terminal-image')
 import { ClientOptions } from '../libs/OptionManager'
@@ -78,12 +79,6 @@ export default class SocketClient extends EventEmitter {
       this.socket.once('qrcode', qrcode)
       this.socket.once('login', login)
       this.socket.send('login')
-    })
-  }
-
-  public upload (): Promise<void> {
-    return new Promise((resolve) => {
-      resolve()
     })
   }
 

@@ -3,6 +3,7 @@ import Connection from '../libs/socket/Connection'
 import SocketServer from '../libs/socket/Server'
 import Service from '../libs/Service'
 import DevTool from '../libs/DevTool'
+import { ensureDirs, removeFiles, unzip } from '../share/fns'
 import { StandardResponse } from '../typings'
 
 export default class SocketService extends Service {
@@ -43,6 +44,12 @@ export default class SocketService extends Service {
     })
 
     this.sendJson(socket, 'login')
+  }
+
+  public async upload (socket: Connection) {
+    const { uploadPath, deployPath } = this.options
+    await ensureDirs(uploadPath, deployPath)
+
   }
 
   public destory (): void {

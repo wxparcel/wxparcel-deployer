@@ -44,7 +44,12 @@ export default class HttpClient extends Client {
     })
   }
 
-  public async uploadProject (folder: string, version: string, message: string): Promise<any> {
+  public async status () {
+    let response = await this.request.get('status')
+    return response
+  }
+
+  public async upload (folder: string, version: string, message: string): Promise<any> {
     message = message || await this.getGitMessage(folder)
 
     const { releasePath } = this.options
@@ -53,7 +58,7 @@ export default class HttpClient extends Client {
 
     await this.compress(folder, zipFile)
     let datas = { appid, version, message, compileType, libVersion, projectname: decodeURIComponent(projectname) }
-    const response = await this.upload('/upload', zipFile, datas).catch((error: CommandError) => {
+    const response = await this.uploadFile('/upload', zipFile, datas).catch((error: CommandError) => {
       fs.removeSync(zipFile)
       return Promise.reject(error)
     })
@@ -62,7 +67,7 @@ export default class HttpClient extends Client {
     return response
   }
 
-  public async upload (serverUrl: string, file: string, data: { [key: string]: any }): Promise<any> {
+  private async uploadFile (url: string, file: string, data: { [key: string]: any }): Promise<any> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not found`))
     }
@@ -103,7 +108,7 @@ export default class HttpClient extends Client {
         }
       }
 
-      const result = await this.request.post(serverUrl, formData, config).catch(catchError)
+      const result = await this.request.post(url, formData, config).catch(catchError)
 
       resolve(result)
     })

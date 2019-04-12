@@ -9,8 +9,8 @@ import SocketClient from '../client/Socket'
 import stdoutServ from '../services/stdout'
 import { ClientCLIOptions } from '../typings'
 
-export const upload = async (options: ClientCLIOptions = {}) => {
-  let { config: configFile, version, message } = options
+const action = (action) => (options) => {
+  let { config: configFile } = options
   let defaultOptions: any = {}
 
   if (configFile) {
@@ -30,6 +30,11 @@ export const upload = async (options: ClientCLIOptions = {}) => {
   let logger = new Logger({ type: globalOptions.logType })
   logger.listen(stdoutServ)
 
+  return action(options, globalOptions)
+}
+
+const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions) => {
+  let { version, message } = options
   if (!options.hasOwnProperty('version')) {
     let pkgFile = path.join(globalOptions.rootPath, 'package.json')
 
@@ -43,9 +48,9 @@ export const upload = async (options: ClientCLIOptions = {}) => {
     throw new Error('Version is not defined, please use option `--version`')
   }
 
-  let folder = options.folder || globalOptions.rootPath
+  const folder = options.folder || globalOptions.rootPath
   if (options.hasOwnProperty('socket')) {
-    let client = new SocketClient(globalOptions)
+    const client = new SocketClient(globalOptions)
     await client.connect().catch((error) => {
       stdoutServ.error(error)
       process.exit(3)
@@ -58,11 +63,11 @@ export const upload = async (options: ClientCLIOptions = {}) => {
     stdoutServ.warn(`Please use ${chalk.yellow.bold('wxparcel-deployer deploy')} to upload project.`)
 
   } else {
-    let client = new HttpClient(globalOptions)
+    const client = new HttpClient(globalOptions)
 
     stdoutServ.clear()
     stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
-    await client.uploadProject(folder, version, message).catch((error) => {
+    await client.upload(folder, version, message).catch((error) => {
       stdoutServ.error(error)
       process.exit(3)
     })
@@ -74,10 +79,39 @@ export const upload = async (options: ClientCLIOptions = {}) => {
 program
 .command('upload')
 .description('upload project to wechat cloud.')
-.option('-c, --config <config>', 'settting config file')
+.option('--folder <folder>', 'setting wx mini program project folder path')
 .option('-v, --version <version>', 'setting upload version')
 .option('-d, --message <message>', 'setting upload message')
-.option('--folder <folder>', 'setting wx mini program project folder path')
+.option('-c, --config <config>', 'settting config file')
 .option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
 .option('--socket', 'setting upload server url, default 0.0.0.0:3000')
-.action(upload)
+.action(action(upload))
+
+const login = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions) => {
+  if (options.hasOwnProperty('socket')) {
+    const client = new SocketClient(globalOptions)
+    await client.connect().catch((error) => {
+      stdoutServ.error(error)
+      process.exit(3)
+    })
+
+    client.on('qrcode', (buffer) => {
+      console.log(buffer)
+    })
+
+    client.on('destroy', () => stdoutServ.error('Connecting closed'))
+    await client.login()
+    client.destroy()
+
+    stdoutServ.warn('Upload function has not been completed yet in socket mode.')
+    stdoutServ.warn(`Please use ${chalk.yellow.bold('wxparcel-deployer deploy')} to upload project.`)
+  }
+}
+
+program
+.command('login')
+.description('login devtool')
+.option('-c, --config <config>', 'settting config file')
+.option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
+.option('--socket', 'setting upload server url, default 0.0.0.0:3000')
+.action(action(login))
