@@ -8,6 +8,7 @@ import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
 import HttpServ from '../server/Http'
 import SocketServ from '../server/Socket'
+import WebSocketServ from '../server/WebSocket'
 import * as pkg from '../../package.json'
 import { ServerCLIOptions } from '../typings'
 
@@ -49,6 +50,11 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const server = options.hasOwnProperty('socket')
     ? new SocketServ(globalOptions)
     : new HttpServ(globalOptions)
+
+  if (server instanceof HttpServ) {
+    let webSocket = new WebSocketServ(globalOptions)
+    webSocket.start(server.getServer())
+  }
 
   await server.start().catch((error) => {
     stdoutServ.error(error)

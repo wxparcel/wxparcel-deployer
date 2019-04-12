@@ -5,16 +5,16 @@ import forEach = require('lodash/forEach')
 import { ServerOptions } from '../libs/OptionManager'
 import DevTool from '../libs/DevTool'
 import Connection from '../libs/http/Connection'
-import HttpServer from '../libs/http/Server'
+import Server from '../libs/http/Server'
 import Service from '../libs/Service'
 import { ensureDirs, removeFiles, unzip } from '../share/fns'
-import { IncomingMessage } from 'http'
+import { Server as HttpServer, IncomingMessage } from 'http'
 import { CommandError, StandardResponse } from '../typings'
 
 export default class HttpService extends Service {
-  private options: ServerOptions
-  private devTool: DevTool
-  private server: HttpServer
+  public options: ServerOptions
+  public devTool: DevTool
+  public server: Server
   private promises: { [key: string ]: Promise<any> }
 
   constructor (options: ServerOptions) {
@@ -23,7 +23,7 @@ export default class HttpService extends Service {
     this.promises = {}
     this.options = options
     this.devTool = new DevTool(this.options)
-    this.server = new HttpServer()
+    this.server = new Server()
 
     this.server.route('GET', '/status', this.status.bind(this))
     this.server.route('POST', '/upload', this.upload.bind(this))
@@ -128,6 +128,10 @@ export default class HttpService extends Service {
     }
 
     promise.then(completed).catch(catchError)
+  }
+
+  public getServer (): HttpServer {
+    return this.server.server
   }
 
   public destory (): void {

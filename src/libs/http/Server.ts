@@ -8,7 +8,7 @@ import { HTTPServerRoute, HTTPServerRouteHandler } from '../../typings'
 
 export default class Server {
   private routes: Array<HTTPServerRoute>
-  private server: HttpServer
+  public server: HttpServer
 
   constructor () {
     this.routes = []

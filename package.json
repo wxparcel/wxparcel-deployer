@@ -47,6 +47,7 @@
     "@types/path-to-regexp": "^1.7.0",
     "@types/portscanner": "^2.1.0",
     "@types/shortid": "^0.0.29",
+    "@types/socket.io": "^2.1.2",
     "concurrently": "^4.1.0",
     "lint-staged": "^7.2.2",
     "nodemon": "^1.18.10",
@@ -72,6 +73,7 @@
     "portscanner": "^2.2.0",
     "pretty-error": "^2.1.1",
     "shortid": "^2.2.14",
+    "socket.io": "^2.2.0",
     "terminal-image": "^0.1.2"
   }
 }

@@ -1,4 +1,5 @@
 import HttpConnection from './libs/http/Connection'
+import { Socket } from 'socket.io'
 
 export type Stdout = (data: Buffer, type?: string) => void
 
@@ -13,6 +14,23 @@ export interface CommandError extends Error {
 
 // server
 // -----------------
+
+export interface WebSocketRequestMessage {
+  action: string
+  payload: any
+}
+
+export interface WebSocketResponseMessage {
+  action: string
+  payload: StandardResponse
+}
+
+export type WebSocketEeventAction = (payload: any, feedback: (data?: StandardResponse) => void, socket: Socket) => Promise<any>
+
+export interface WebSocketEevent {
+  type: string
+  action: (socket: Socket, action: string, payload: any) => Promise<any>
+}
 
 export interface StandardResponse {
   status?: number

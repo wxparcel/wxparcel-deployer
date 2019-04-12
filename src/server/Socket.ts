@@ -3,7 +3,7 @@ import Connection from '../libs/socket/Connection'
 import SocketServer from '../libs/socket/Server'
 import Service from '../libs/Service'
 import DevTool from '../libs/DevTool'
-import { ensureDirs, removeFiles, unzip } from '../share/fns'
+import { ensureDirs } from '../share/fns'
 import { StandardResponse } from '../typings'
 
 export default class SocketService extends Service {
