@@ -3,8 +3,7 @@ import Connection from '../libs/socket/Connection'
 import SocketServer from '../libs/socket/Server'
 import Service from '../libs/Service'
 import DevTool from '../libs/DevTool'
-import { ensureDirs } from '../share/fns'
-import { StandardResponse } from '../typings'
+import { StandardResponse, Feedback } from '../typings'
 
 export default class SocketService extends Service {
   private options: ServerOptions
@@ -18,8 +17,8 @@ export default class SocketService extends Service {
     this.devTool = new DevTool(this.options)
     this.server = new SocketServer()
 
-    this.server.onMessage('login', this.login.bind(this))
-    this.server.onMessage('status', this.status.bind(this))
+    this.listen('login', this.login.bind(this))
+    this.listen('status', this.status.bind(this))
   }
 
   public async start (): Promise<void> {
@@ -27,11 +26,11 @@ export default class SocketService extends Service {
     return this.server.listen(port)
   }
 
-  public async status (socket: Connection): Promise<void> {
-    this.sendJson(socket, 'status', { message: 'okaya, server is running.' })
+  public async status (_: Connection, feedback: Feedback): Promise<void> {
+    feedback({ message: 'okaya, server is running.' })
   }
 
-  public async login (socket: Connection): Promise<void> {
+  public async login (socket: Connection, feedback: Feedback): Promise<void> {
     const task = () => {
       const qrcode = (qrcode: Buffer) => socket.send('qrcode', qrcode)
       return this.devTool.login(qrcode)
@@ -39,17 +38,25 @@ export default class SocketService extends Service {
 
     await this.execute(task).catch((error) => {
       let { status, message } = this.resolveCommandError(error)
-      this.sendJson(socket, 'login', { status, message })
+      feedback({ status, message })
       return Promise.reject(error)
     })
 
-    this.sendJson(socket, 'login')
+    feedback()
   }
 
-  public async upload (socket: Connection) {
-    const { uploadPath, deployPath } = this.options
-    await ensureDirs(uploadPath, deployPath)
+  public listen (event: string, handle: (socket: Connection, feedback: Feedback) => Promise<void>) {
+    const listen = async (socket: Connection) => {
+      const feedback = this.feedback.bind(this, socket, event)
+      await handle(socket, feedback)
+    }
 
+    this.server.onMessage(event, listen)
+  }
+
+  private feedback (socket: Connection, eventType: string, content?: StandardResponse) {
+    let response = this.standard({ ...content })
+    socket.send(eventType, response)
   }
 
   public destory (): void {
@@ -59,10 +66,5 @@ export default class SocketService extends Service {
 
     this.devTool = undefined
     this.options = undefined
-  }
-
-  private sendJson (socket: Connection, eventType: string, content?: StandardResponse) {
-    let response = this.standard({ ...content })
-    socket.send(eventType, response)
   }
 }

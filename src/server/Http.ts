@@ -9,12 +9,12 @@ import Server from '../libs/http/Server'
 import Service from '../libs/Service'
 import { ensureDirs, removeFiles, unzip } from '../share/fns'
 import { Server as HttpServer, IncomingMessage } from 'http'
-import { CommandError, StandardResponse } from '../typings'
+import { CommandError, StandardResponse, Feedback } from '../typings'
 
 export default class HttpService extends Service {
-  public options: ServerOptions
-  public devTool: DevTool
-  public server: Server
+  private options: ServerOptions
+  private devTool: DevTool
+  private server: Server
   private promises: { [key: string ]: Promise<any> }
 
   constructor (options: ServerOptions) {
@@ -25,10 +25,19 @@ export default class HttpService extends Service {
     this.devTool = new DevTool(this.options)
     this.server = new Server()
 
-    this.server.route('GET', '/status', this.status.bind(this))
-    this.server.route('POST', '/upload', this.upload.bind(this))
-    this.server.route('GET', '/login', this.login.bind(this))
-    this.server.route('GET', '/checkin', this.checkin.bind(this))
+    this.route('GET', '/status', this.status.bind(this))
+    this.route('POST', '/upload', this.upload.bind(this))
+    this.route('GET', '/login', this.login.bind(this))
+    this.route('GET', '/checkin', this.checkin.bind(this))
+  }
+
+  public route (methods: string | Array<string>, path: string, handle: (params: any, conn: Connection, feedback: Feedback) => void) {
+    const router = async (params: RegExpExecArray, conn: Connection) => {
+      const feedback = this.feedback.bind(this, conn)
+      await handle(params, conn, feedback)
+    }
+
+    this.server.route(methods, path, router)
   }
 
   public async start (): Promise<void> {
@@ -36,11 +45,11 @@ export default class HttpService extends Service {
     return this.server.listen(port)
   }
 
-  public async status (_: RegExpExecArray, conn: Connection): Promise<void> {
-    this.writeJson({ message: 'okaya, server is running.' }, conn)
+  public async status (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
+    feedback({ message: 'okaya, server is running.' })
   }
 
-  public async upload (_: RegExpExecArray, conn: Connection): Promise<void> {
+  public async upload (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
     const { request } = conn
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
@@ -67,7 +76,7 @@ export default class HttpService extends Service {
       let { status, message } = this.resolveCommandError(error)
 
       conn.setStatus(status)
-      this.writeJson({ message }, conn)
+      feedback({ message })
 
       return Promise.reject(error)
     }
@@ -76,13 +85,13 @@ export default class HttpService extends Service {
     await removeFiles(uploadFile, projFolder)
 
     log('Upload completed')
-    this.writeJson({ message: 'Upload completed' }, conn)
+    feedback({ message: 'Upload completed' })
   }
 
-  public async login (_: RegExpExecArray, conn: Connection): Promise<void> {
+  public async login (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
     const command = (): Promise<any> => new Promise((resolve) => {
       const completed = (qrcode: Buffer) => {
-        this.writeJson({ data: qrcode.toString() }, conn)
+        feedback({ data: qrcode })
         resolve()
       }
 
@@ -90,7 +99,7 @@ export default class HttpService extends Service {
         let { status, message } = this.resolveCommandError(error)
 
         conn.setStatus(status)
-        this.writeJson({ message }, conn)
+        feedback({ message })
 
         return Promise.reject(error)
       }
@@ -102,12 +111,12 @@ export default class HttpService extends Service {
     await this.execute(command)
   }
 
-  public async checkin (_: RegExpExecArray, conn: Connection): Promise<void> {
+  public async checkin (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
     const { request } = conn
     const { login: promise } = this.promises
 
     if (!(promise instanceof Promise)) {
-      this.writeJson({ status: 401, message: 'unlogined' }, conn)
+      feedback({ status: 401, message: 'unlogined' })
       return
     }
 
@@ -115,14 +124,14 @@ export default class HttpService extends Service {
     request.once('end', remove)
 
     const completed = () => {
-      this.writeJson({ message: 'logined success' }, conn)
+      feedback({ message: 'logined success' })
     }
 
     const catchError = (error: CommandError) => {
       let { status, message } = this.resolveCommandError(error)
 
       conn.setStatus(status)
-      this.writeJson({ message }, conn)
+      feedback({ message })
 
       return Promise.reject(error)
     }
@@ -132,15 +141,6 @@ export default class HttpService extends Service {
 
   public getServer (): HttpServer {
     return this.server.server
-  }
-
-  public destory (): void {
-    super.destory()
-
-    this.server.close()
-
-    this.devTool = undefined
-    this.options = undefined
   }
 
   private transfer (request: IncomingMessage): Promise<any> {
@@ -169,8 +169,17 @@ export default class HttpService extends Service {
     })
   }
 
-  private writeJson (content: StandardResponse, conn: Connection) {
+  private feedback (conn: Connection, content: StandardResponse) {
     let response = this.standard({ status: conn.status, ...content })
     conn.writeJson(response)
+  }
+
+  public destory (): void {
+    super.destory()
+
+    this.server.close()
+
+    this.devTool = undefined
+    this.options = undefined
   }
 }

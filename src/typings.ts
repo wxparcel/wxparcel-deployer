@@ -15,6 +15,21 @@ export interface CommandError extends Error {
 // server
 // -----------------
 
+export interface StandardResponse {
+  status?: number
+  code?: number
+  data?: any
+  message?: string
+}
+
+export type Feedback = (content?: StandardResponse) => void
+
+export type HTTPServerRoute = (connection: HttpConnection) => Promise<any>
+export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
+
+// websocket server
+// -----------------
+
 export interface WebSocketRequestMessage {
   action: string
   payload: any
@@ -25,22 +40,10 @@ export interface WebSocketResponseMessage {
   payload: StandardResponse
 }
 
-export type WebSocketEeventAction = (payload: any, feedback: (data?: StandardResponse) => void, socket: Socket) => Promise<any>
-
 export interface WebSocketEevent {
   type: string
   action: (socket: Socket, action: string, payload: any) => Promise<any>
 }
-
-export interface StandardResponse {
-  status?: number
-  code?: number
-  data?: any
-  message?: string
-}
-
-export type HTTPServerRoute = (connection: HttpConnection) => Promise<any>
-export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
 
 // logger
 // -----------------

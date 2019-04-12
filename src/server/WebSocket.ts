@@ -4,7 +4,13 @@ import Service from '../libs/Service'
 import DevTool from '../libs/DevTool'
 import { Server as HttpServer } from 'http'
 import { Server as SocketServer, Socket } from 'socket.io'
-import { WebSocketEevent, WebSocketRequestMessage, WebSocketResponseMessage, WebSocketEeventAction, StandardResponse } from '../typings'
+import {
+  StandardResponse,
+  Feedback,
+  WebSocketEevent,
+  WebSocketRequestMessage,
+  WebSocketResponseMessage
+} from '../typings'
 
 export default class WebSocketServer extends Service {
   private options: ServerOptions
@@ -35,14 +41,27 @@ export default class WebSocketServer extends Service {
       this.server = SocketIO(port)
     }
 
-    this.server.on('connection', this.attachSocket.bind(this))
+    const connection = (socket: Socket) => {
+      const onMessage = (message: WebSocketRequestMessage) => {
+        const { action, payload } = message
+        this.events.forEach((event) => {
+          if (event.type === action) {
+            event.action(socket, action, payload)
+          }
+        })
+      }
+
+      socket.on('deploy', onMessage)
+    }
+
+    this.server.on('connection', connection)
   }
 
-  public async status (_: WebSocketRequestMessage, feedback: (data?: StandardResponse) => void): Promise<void> {
+  public async status (_: WebSocketRequestMessage, feedback: Feedback): Promise<void> {
     feedback({ message: 'okaya, server is running.' })
   }
 
-  public async login (_: WebSocketRequestMessage, feedback: (data?: StandardResponse) => void, socket: Socket): Promise<void> {
+  public async login (_: WebSocketRequestMessage, feedback: Feedback, socket: Socket): Promise<void> {
     const task = () => {
       const qrcode = (qrcode: Buffer) => this.feedback(socket, 'qrcode', { data: qrcode })
       return this.devTool.login(qrcode)
@@ -66,26 +85,13 @@ export default class WebSocketServer extends Service {
     socket.emit('deploy', params)
   }
 
-  private register (type: string, listener: WebSocketEeventAction): void {
+  private register (type: string, listener: (payload: any, feedback: Feedback, socket: Socket) => Promise<any>): void {
     const action = async (socket: Socket, action: string, payload: any): Promise<any> => {
       const feedback = this.feedback.bind(this, socket, action)
       return listener(payload, feedback, socket)
     }
 
     this.events.push({ type, action })
-  }
-
-  private attachSocket (socket: Socket) {
-    const onMessage = (message: WebSocketRequestMessage) => {
-      const { action, payload } = message
-      this.events.forEach((event) => {
-        if (event.type === action) {
-          event.action(socket, action, payload)
-        }
-      })
-    }
-
-    socket.on('deploy', onMessage)
   }
 
   public destory (): void {

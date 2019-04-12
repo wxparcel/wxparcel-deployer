@@ -91,7 +91,7 @@ export default class SocketClient extends EventEmitter {
     this.socket = undefined
   }
 
-  private intercept (response: StandardResponse): Promise<any> {
+  private intercept (response: StandardResponse = {}): Promise<any> {
     const { status, code, message } = response
     if (200 <= status && status < 400 && code === 0) {
       return Promise.resolve(response)
