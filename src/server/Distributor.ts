@@ -108,8 +108,9 @@ export class SocketClient extends Service {
   public destory (): void {
     super.destory()
 
-    this.socket.removeAllListeners()
+    this.socket.disconnect()
     this.socket.close()
+    this.socket.removeAllListeners()
 
     this.devTool = undefined
     this.options = undefined

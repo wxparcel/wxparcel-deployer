@@ -3,10 +3,10 @@ import path = require('path')
 import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
 import { ServerOptions } from './OptionManager'
+import StdoutServ from '../services/stdout'
 import { validProject, findPages } from '../share/wx'
 import { spawnPromisify, killToken as genKillToken, killProcess } from '../share/fns'
 import { Stdout, DevToolQRCodeHandle, CommandError } from '../typings'
-import StdoutService from '../services/stdout'
 
 const responseInterceptors = (response) => {
   const { status, data: message } = response
@@ -43,7 +43,7 @@ export default class DevTool {
    *
    * @param folder 项目文件夹
    */
-  public async open (folder: string): Promise<any> {
+  public open (folder: string): Promise<any> {
     const valid = validProject(folder)
     if (valid !== true) {
       return Promise.reject(valid)
@@ -54,15 +54,14 @@ export default class DevTool {
         projectpath: encodeURIComponent(folder)
       }
 
-      await this.request.get('/open', { params })
-
-    } else if (this.command) {
-      const params = [
-        '--open', folder
-      ]
-
-      await this.command(params)
+      return this.request.get('/open', { params })
     }
+
+    const params = [
+      '--open', folder
+    ]
+
+    return this.command(params)
   }
 
   /**
@@ -70,7 +69,7 @@ export default class DevTool {
    *
    * @param qrcodeCallback 二维码处理回调
    */
-  public async login (qrcodeCallback: DevToolQRCodeHandle, killToken?: symbol): Promise<any> {
+  public login (qrcodeCallback: DevToolQRCodeHandle, killToken?: symbol): Promise<any> {
     const { uid, qrcodePath } = this.options
     const qrcodeFile = path.join(qrcodePath, uid)
 
@@ -81,22 +80,22 @@ export default class DevTool {
       fs.removeSync(qrcodeFile)
     })
 
-    const task = (statsFile: string, killToken: symbol) => {
+    const command = (statsFile: string, killToken: symbol) => {
       const params = [
         '--login',
         '--login-qr-output', `base64@${qrcodeFile}`,
         '--login-result-output', `${statsFile}`
       ]
-
       return this.command(params, null, null, killToken)
     }
 
-    const response = await this.execute(task, killToken)
-    if (response.status !== 'SUCCESS') {
-      return Promise.reject(new Error(response.error))
-    }
+    return this.execute(command, killToken).then((response) => {
+      if (response.status !== 'SUCCESS') {
+        return Promise.reject(new Error(response.error))
+      }
 
-    return response
+      return response
+    })
   }
 
   /**
@@ -105,8 +104,8 @@ export default class DevTool {
    * @param folder 项目文件夹
    * @param qrcodeCallback 二维码处理回调
    */
-  public async preview (folder: string, qrcodeCallback: DevToolQRCodeHandle, killToken?: symbol): Promise<any> {
-    const task = async (statsFile) => {
+  public preview (folder: string, qrcodeCallback: DevToolQRCodeHandle, killToken?: symbol): Promise<any> {
+    const command = async (statsFile) => {
       const valid = validProject(folder)
       if (valid !== true) {
         return Promise.reject(valid)
@@ -148,7 +147,7 @@ export default class DevTool {
       }
     }
 
-    return this.execute(task, killToken)
+    return this.execute(command, killToken)
   }
 
   /**
@@ -158,8 +157,8 @@ export default class DevTool {
    * @param version 发布版本号
    * @param description 发布描述
    */
-  public async upload (folder: string, version: string, description: string, killToken?: symbol): Promise<any> {
-    const task = async (statsFile) => {
+  public upload (folder: string, version: string, description: string, killToken?: symbol): Promise<any> {
+    const command = (statsFile) => {
       const valid = validProject(folder)
       if (valid !== true) {
         return Promise.reject(valid)
@@ -173,20 +172,19 @@ export default class DevTool {
           infooutput: statsFile
         }
 
-        await this.request.get('/upload', { params })
-
-      } else if (this.command) {
-        const params = [
-          '--upload', `${version}@${folder}`,
-          '--upload-desc', encodeURIComponent(description),
-          '--upload-info-output', statsFile
-        ]
-
-        await this.command(params)
+        return this.request.get('/upload', { params })
       }
+
+      const params = [
+        '--upload', `${version}@${folder}`,
+        '--upload-desc', encodeURIComponent(description),
+        '--upload-info-output', statsFile
+      ]
+
+      return this.command(params)
     }
 
-    return this.execute(task, killToken)
+    return this.execute(command, killToken)
   }
 
   /**
@@ -194,7 +192,7 @@ export default class DevTool {
    *
    * @param folder 项目文件夹
    */
-  public async test (folder: string): Promise<any> {
+  public test (folder: string): Promise<any> {
     const valid = validProject(folder)
     if (valid !== true) {
       return Promise.reject(valid)
@@ -205,15 +203,15 @@ export default class DevTool {
         projectpath: encodeURIComponent(folder)
       }
 
-      await this.request.get('/test', { params })
+      return this.request.get('/test', { params })
 
-    } else if (this.command) {
-      const params = [
-        '--test', folder
-      ]
-
-      await this.command(params)
     }
+
+    const params = [
+      '--test', folder
+    ]
+
+    return this.command(params)
   }
 
   /**
@@ -221,7 +219,7 @@ export default class DevTool {
    *
    * @param folder 项目文件夹
    */
-  public async autoPreview (folder: string, killToken?: symbol): Promise<any> {
+  public autoPreview (folder: string, killToken?: symbol): Promise<any> {
     const task = async (statsFile) => {
       const valid = validProject(folder)
       if (valid !== true) {
@@ -254,7 +252,7 @@ export default class DevTool {
    *
    * @param folder 项目文件夹
    */
-  public async close (folder: string): Promise<any> {
+  public close (folder: string): Promise<any> {
     const valid = validProject(folder)
     if (valid !== true) {
       return Promise.reject(valid)
@@ -265,34 +263,32 @@ export default class DevTool {
         projectpath: encodeURIComponent(folder)
       }
 
-      await this.request.get('/close', { params })
-
-    } else if (this.command) {
-      const params = [
-        '--close', folder
-      ]
-
-      await this.command(params)
+      return this.request.get('/close', { params })
     }
+
+    const params = [
+      '--close', folder
+    ]
+
+    return this.command(params)
   }
 
   /**
    * 关闭开发者工具
    */
-  public async quit (): Promise<any> {
+  public quit (): Promise<any> {
     if (this.request) {
-      await this.request.get('/quit')
-
-    } else if (this.command) {
-      const params = [
-        '--quit'
-      ]
-
-      await this.command(params)
+      return this.request.get('/quit')
     }
+
+    const params = [
+      '--quit'
+    ]
+
+    return this.command(params)
   }
 
-  private async execute (task: (statsFile: string, killToken: symbol) => Promise<any>, killToken?: symbol) {
+  private execute (task: (statsFile: string, killToken: symbol) => Promise<any>, killToken?: symbol) {
     const { tempPath, uid } = this.options
 
     let statsFile = path.join(tempPath, `./stats/${uid}.json`)
@@ -308,10 +304,14 @@ export default class DevTool {
 
     let statsPromise = this.watchFile(statsFile, killToken)
     let excePromise = task(statsFile, killToken)
-    let [content] = await Promise.all([statsPromise, excePromise]).catch(catchError)
 
-    fs.removeSync(statsFile)
-    return JSON.parse(content.toString())
+    const success = (response) => {
+      let { content } = response
+      fs.removeSync(statsFile)
+      return JSON.parse(content.toString())
+    }
+
+    return Promise.all([statsPromise, excePromise]).then(success).catch(catchError)
   }
 
   private watchFile (file: string, killToken: symbol = genKillToken()): Promise<Buffer> {
@@ -342,7 +342,7 @@ export default class DevTool {
 
     let kill = () => watcher && watcher.close()
     this.setTimeout(promise, killToken, kill).catch((error) => {
-      StdoutService.error(error)
+      StdoutServ.error(error)
     })
 
     return promise
@@ -358,7 +358,7 @@ export default class DevTool {
   }
 
   private setTimeout (promise: Promise<any>, killToken: symbol, kill: () => void, timeout: number = 30e3): Promise<any> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       let timer = () => {
         this.kill(killToken)
 
@@ -371,31 +371,31 @@ export default class DevTool {
       let timeId = setTimeout(timer, timeout)
       this.warders.push({ token: killToken, kill })
 
-      try {
-        let response = await promise
+      const success = (response) => {
         clearTimeout(timeId)
         resolve(response)
+      }
 
-      } catch (error) {
+      const error = (error) => {
         clearTimeout(timeId)
         reject(error)
       }
+
+      promise.then(success).catch(error)
     })
   }
 
-  private async spawn (command?: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: symbol): Promise<any> {
-    const code = await spawnPromisify(command, params, options, stdout, killToken).catch((error) => {
-      return Promise.reject(error)
+  private spawn (command?: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: symbol): Promise<any> {
+    return spawnPromisify(command, params, options, stdout, killToken).then((code) => {
+      if (code !== 0) {
+        let error = new Error(`Command ${command} ${params.join(' ')} fail, error code: ${code}`) as CommandError
+        error.code = code
+
+        return Promise.reject(error)
+      }
+
+      return code
     })
-
-    if (code !== 0) {
-      let error = new Error(`Command ${command} ${params.join(' ')} fail, error code: ${code}`) as CommandError
-      error.code = code
-
-      return Promise.reject(error)
-    }
-
-    return code
   }
 
   private kill (killToken?: Symbol) {

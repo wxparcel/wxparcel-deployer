@@ -7,6 +7,7 @@ import DevTool from '../libs/DevTool'
 import Connection from '../libs/http/Connection'
 import Server from '../libs/http/Server'
 import Service from '../libs/Service'
+import StdoutServ from '../services/stdout'
 import { ensureDirs, removeFiles, unzip, killProcess } from '../share/fns'
 import { Server as HttpServer, IncomingMessage } from 'http'
 import { CommandError, StandardResponse, HttpServerTunnel } from '../typings'
@@ -102,7 +103,10 @@ export default class HttpService extends Service {
       }
 
       let promise = this.devTool.login(feedbackQrCode, killToken).catch(catchError)
-      this.promises.login = promise
+      this.promises.login = promise.catch((error) => {
+        StdoutServ.error(error)
+      })
+
       this.tokens.login = killToken
     })
 
