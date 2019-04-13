@@ -5,6 +5,7 @@ import isPlainObject = require('lodash/isPlainObject')
 import forEach = require('lodash/forEach')
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import FormData = require('form-data')
+import terminalImage = require('terminal-image')
 import { ClientOptions } from '../libs/OptionManager'
 import Client from '../libs/Client'
 import stdoutServ from '../services/stdout'
@@ -49,16 +50,34 @@ export default class HttpClient extends Client {
     return response
   }
 
-  public async upload (folder: string, version: string, message: string): Promise<any> {
-    message = message || await this.getGitMessage(folder)
+  public async upload (folder: string, version: string, message: string, url: string = '/upload'): Promise<any> {
+    let repoUrl = await this.getGitRepo(folder)
+    let getLog = await this.getGitMessage(folder)
+    let [gitMessage, gitDatetime] = getLog.split('\n')
+
+    gitMessage = gitMessage || ''
+    gitDatetime = gitDatetime || new Date() + ''
+    message = message || gitMessage
 
     const { releasePath } = this.options
     const { appid, compileType, libVersion, projectname } = await this.getProjectConfig(folder)
     const zipFile = path.join(releasePath, `${appid}.zip`)
 
     await this.compress(folder, zipFile)
-    let datas = { appid, version, message, compileType, libVersion, projectname: decodeURIComponent(projectname) }
-    const response = await this.uploadFile('/upload', zipFile, datas).catch((error: CommandError) => {
+
+    let datas = {
+      repoUrl,
+      gitMessage,
+      gitDatetime,
+      appid,
+      version,
+      message,
+      compileType,
+      libVersion,
+      projectname: decodeURIComponent(projectname)
+    }
+
+    const response = await this.uploadFile(url, zipFile, datas).catch((error: CommandError) => {
       fs.removeSync(zipFile)
       return Promise.reject(error)
     })
@@ -84,8 +103,8 @@ export default class HttpClient extends Client {
       stream.once('end', () => stream.close())
 
       const formData = new FormData()
-      formData.append('file', stream)
       forEach(Object.assign({ uid }, data), (value, name) => formData.append(name, value))
+      formData.append('file', stream)
 
       const catchError = (error) => {
         reject(error)
@@ -109,8 +128,36 @@ export default class HttpClient extends Client {
       }
 
       const result = await this.request.post(url, formData, config).catch(catchError)
-
       resolve(result)
     })
+  }
+
+  public async login (): Promise<any> {
+    const response = await this.request.get('/login')
+    const content = response.data || {}
+    const { type, data } = content.data
+
+    if (type === 'Buffer') {
+      let qrcode = Buffer.from(data, 'base64')
+      let regexp = /^data:image\/([\w+]+);base64,([\s\S]+)/
+      let base64 = qrcode.toString()
+      let match = regexp.exec(base64)
+
+      if (match) {
+        let content = match[2]
+        let buffer = Buffer.from(content, 'base64')
+        let image = await terminalImage.buffer(buffer)
+        return image
+      }
+
+      return Promise.reject(new Error('Qrcode is invalid'))
+    }
+
+    return Promise.reject(new Error('Qrcode is invalid'))
+  }
+
+  public async checkin (): Promise<any> {
+    const response = await this.request.get('/checkin')
+    return response.data
   }
 }

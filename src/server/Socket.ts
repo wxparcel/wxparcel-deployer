@@ -35,12 +35,12 @@ export default class SocketService extends Service {
   public async login (tunnel: SocketServerTunnel): Promise<void> {
     const { socket, feedback } = tunnel
 
-    const task = () => {
+    const command = (killToken: symbol) => {
       const qrcode = (qrcode: Buffer) => socket.send('qrcode', qrcode)
-      return this.devTool.login(qrcode)
+      return this.devTool.login(qrcode, killToken)
     }
 
-    await this.execute(task).catch((error) => {
+    await this.execute(command).catch((error) => {
       let { status, message } = this.resolveCommandError(error)
       feedback({ status, message })
       return Promise.reject(error)

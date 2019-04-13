@@ -6,6 +6,7 @@ import { ServerOptions } from './OptionManager'
 import { validProject, findPages } from '../share/wx'
 import { spawnPromisify, killToken as genKillToken, killProcess } from '../share/fns'
 import { Stdout, DevToolQRCodeHandle, CommandError } from '../typings'
+import stdout from '../services/stdout'
 
 const responseInterceptors = (response) => {
   const { status, data: message } = response
@@ -340,7 +341,9 @@ export default class DevTool {
     })
 
     let kill = () => watcher && watcher.close()
-    this.setTimeout(promise, killToken, kill)
+    this.setTimeout(promise, killToken, kill).catch((error) => {
+      stdout.error(error)
+    })
 
     return promise
   }
@@ -350,7 +353,6 @@ export default class DevTool {
 
     let promise = this.spawn(devToolCli, params, options, stdout, killToken)
     let kill = () => killProcess(killToken)
-
     return this.setTimeout(promise, killToken, kill)
   }
 
@@ -381,7 +383,9 @@ export default class DevTool {
   }
 
   private async spawn (command?: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: symbol): Promise<any> {
-    const code = await spawnPromisify(command, params, options, stdout, killToken)
+    const code = await spawnPromisify(command, params, options, stdout, killToken).catch((error) => {
+      return Promise.reject(error)
+    })
 
     if (code !== 0) {
       let error = new Error(`Command ${command} ${params.join(' ')} fail, error code: ${code}`) as CommandError

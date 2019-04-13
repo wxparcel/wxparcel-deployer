@@ -2,10 +2,12 @@ import chalk from 'chalk'
 import defaultsDeep = require('lodash/defaultsDeep')
 import pick = require('lodash/pick')
 import stdoutServ from '../services/stdout'
+import { killToken as genKillToken, killProcess } from '../share/fns'
 import { CommandError, StandardResponse } from '../typings'
 
-export default class Server {
+export default class Service {
   private queue: Array<Promise<any>>
+  private killTokens: Array<symbol>
 
   get idle () {
     return this.queue.length === 0
@@ -13,13 +15,32 @@ export default class Server {
 
   constructor () {
     this.queue = []
+    this.killTokens = []
   }
 
-  public async execute (command: () => Promise<void>): Promise<void> {
+  public async execute (command: (killToken: symbol) => Promise<void>): Promise<void> {
     this.queue.length > 0 && await Promise.all(this.queue)
 
-    const promise = command()
+    const killToken = genKillToken()
+
+    const removeKillToken = (killToken: symbol) => {
+      let index = this.killTokens.findIndex((token) => token === killToken)
+      index === -1 && this.killTokens.splice(index, 1)
+    }
+
+    const promise = command(killToken)
+      .then((response) => {
+        removeKillToken(killToken)
+        return response
+      })
+      .catch((error) => {
+        removeKillToken(killToken)
+        return Promise.reject(error)
+      })
+
     this.pushQueue(promise)
+    this.killTokens.push(killToken)
+
     await promise
   }
 
@@ -40,7 +61,7 @@ export default class Server {
 
   public removeQueue (promise: Promise<void>) {
     let index = this.queue.indexOf(promise)
-    this.queue.splice(index, 1)
+    index !== -1 && this.queue.splice(index, 1)
   }
 
   public log (message: string, ...args: Array<string>): void {
@@ -106,6 +127,11 @@ export default class Server {
 
   public destory (): void {
     this.queue && this.queue.splice(0)
+
+    let killTokens = this.killTokens.splice(0)
+    killTokens.forEach((killToken) => killProcess(killToken))
+
     this.queue = undefined
+    this.killTokens = undefined
   }
 }

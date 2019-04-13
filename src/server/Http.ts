@@ -7,7 +7,7 @@ import DevTool from '../libs/DevTool'
 import Connection from '../libs/http/Connection'
 import Server from '../libs/http/Server'
 import Service from '../libs/Service'
-import { ensureDirs, removeFiles, unzip } from '../share/fns'
+import { ensureDirs, removeFiles, unzip, killProcess } from '../share/fns'
 import { Server as HttpServer, IncomingMessage } from 'http'
 import { CommandError, StandardResponse, HttpServerTunnel } from '../typings'
 
@@ -16,11 +16,13 @@ export default class HttpService extends Service {
   private devTool: DevTool
   private server: Server
   private promises: { [key: string ]: Promise<any> }
+  private tokens: { [key: string]: symbol }
 
   constructor (options: ServerOptions) {
     super()
 
     this.promises = {}
+    this.tokens = {}
     this.options = options
     this.devTool = new DevTool(this.options)
     this.server = new Server()
@@ -60,9 +62,9 @@ export default class HttpService extends Service {
 
     this.pushQueue(...unzipPromises)
 
-    const command = () => {
+    const command = (killToken: symbol) => {
       log('Start to upload to weixin server')
-      return this.devTool.upload(projFolder, version, message)
+      return this.devTool.upload(projFolder, version, message, killToken)
     }
 
     const catchError = (error: CommandError) => {
@@ -84,8 +86,8 @@ export default class HttpService extends Service {
   public async login (tunnel: HttpServerTunnel): Promise<void> {
     const { conn, feedback } = tunnel
 
-    const command = (): Promise<any> => new Promise((resolve) => {
-      const completed = (qrcode: Buffer) => {
+    const command = (killToken: symbol): Promise<any> => new Promise((resolve) => {
+      const feedbackQrCode = (qrcode: Buffer) => {
         feedback({ data: qrcode })
         resolve()
       }
@@ -99,9 +101,16 @@ export default class HttpService extends Service {
         return Promise.reject(error)
       }
 
-      let promise = this.devTool.login(completed).catch(catchError)
+      let promise = this.devTool.login(feedbackQrCode, killToken).catch(catchError)
       this.promises.login = promise
+      this.tokens.login = killToken
     })
+
+    const { login: killToken } = this.tokens
+    killToken && killProcess(killToken)
+
+    this.tokens.login = null
+    this.promises.login = null
 
     await this.execute(command)
   }
@@ -137,8 +146,9 @@ export default class HttpService extends Service {
 
   public route (methods: string | Array<string>, path: string, handle: (tunnel: HttpServerTunnel) => Promise<void>) {
     const router = async (params: RegExpExecArray, conn: Connection) => {
+      const { uid } = await this.transfer(conn.request)
       const feedback = this.feedback.bind(this, conn)
-      const log = (message: string) => this.log(message, 'anonymous')
+      const log = (message: string) => this.log(message, uid || 'anonymous')
 
       await handle({ params, conn, feedback, log }).catch((error) => {
         return Promise.reject(error)

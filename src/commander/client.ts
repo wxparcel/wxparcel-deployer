@@ -67,7 +67,9 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
 
     stdoutServ.clear()
     stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
-    await client.upload(folder, version, message).catch((error) => {
+
+    const uploadPath = options.hasOwnProperty('distributor') ? '/collector' : '/upload'
+    await client.upload(folder, version, message, uploadPath).catch((error) => {
       stdoutServ.error(error)
       process.exit(3)
     })
@@ -84,7 +86,8 @@ program
 .option('-d, --message <message>', 'setting upload message')
 .option('-c, --config <config>', 'settting config file')
 .option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
-.option('--socket', 'setting upload server url, default 0.0.0.0:3000')
+.option('--socket', 'setting socket mode')
+.option('--distributor', 'setting distributor mode')
 .action(action(upload))
 
 const login = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions) => {
@@ -95,16 +98,24 @@ const login = async (options: ClientCLIOptions = {}, globalOptions: ClientOption
       process.exit(3)
     })
 
-    client.on('qrcode', (buffer) => {
-      console.log(buffer)
-    })
-
+    client.on('qrcode', (buffer) => console.log(buffer))
     client.on('destroy', () => stdoutServ.error('Connecting closed'))
+
     await client.login()
     client.destroy()
 
     stdoutServ.warn('Upload function has not been completed yet in socket mode.')
     stdoutServ.warn(`Please use ${chalk.yellow.bold('wxparcel-deployer deploy')} to upload project.`)
+
+  } else {
+    const client = new HttpClient(globalOptions)
+    const qrcode = await client.login().catch((error) => {
+      stdoutServ.error(error)
+      process.exit(3)
+    })
+
+    stdoutServ.info('Please scan the QR code to log in')
+    stdoutServ.log(qrcode)
   }
 }
 
@@ -113,5 +124,22 @@ program
 .description('login devtool')
 .option('-c, --config <config>', 'settting config file')
 .option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
-.option('--socket', 'setting upload server url, default 0.0.0.0:3000')
+.option('--socket', 'setting socket mode')
 .action(action(login))
+
+const checkin = async (_: ClientCLIOptions = {}, globalOptions: ClientOptions) => {
+  const client = new HttpClient(globalOptions)
+  await client.checkin().catch((error) => {
+    stdoutServ.error(error)
+    process.exit(3)
+  })
+
+  stdoutServ.ok('Login success')
+}
+
+program
+.command('checkin')
+.description('check login devtool')
+.option('-c, --config <config>', 'settting config file')
+.option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
+.action(action(checkin))

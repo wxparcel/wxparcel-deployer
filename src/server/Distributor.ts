@@ -8,7 +8,6 @@ import DevTool from '../libs/DevTool'
 import Service from '../libs/Service'
 import WebSocketService from './WebSocket'
 import { IncomingMessage } from 'http'
-
 import { Socket } from 'socket.io-client'
 import {
   WebSocketEevent,
@@ -26,16 +25,19 @@ export class SocketClient extends Service {
   private events: Array<WebSocketEevent>
   private socket: typeof Socket
 
-  constructor (id: string, options: ServerOptions) {
+  constructor (id: string, options: ServerOptions, devTool: DevTool) {
     super()
 
     this.id = id
     this.options = options
-    this.devTool = new DevTool(this.options)
+    this.devTool = devTool
     this.events = []
   }
 
-  public start (url): Promise<void> {
+  public status = WebSocketService.prototype.status
+  public login = WebSocketService.prototype.login
+
+  public start (url: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const params = {
         reconnection: true,
@@ -46,9 +48,8 @@ export class SocketClient extends Service {
 
       this.socket = SocketIO(url, params)
 
-      const { status, login } = WebSocketService.prototype
-      this.listen('checkStatus', status.bind(this))
-      this.listen('login', login.bind(this))
+      this.listen('checkStatus', this.status.bind(this))
+      this.listen('login', this.login.bind(this))
 
       const connection = () => {
         const onMessage = (message: WebSocketRequestMessage) => {
@@ -106,6 +107,8 @@ export class SocketClient extends Service {
 
   public destory (): void {
     super.destory()
+
+    this.socket.removeAllListeners()
     this.socket.close()
 
     this.devTool = undefined
@@ -117,6 +120,7 @@ export class SocketClient extends Service {
 export default class Distributor extends Service {
   private options: ServerOptions
   private server: HttpServer
+  private devTool: DevTool
   private sockets: Array<{ url: string, socket: SocketClient }>
 
   constructor (options: ServerOptions) {
@@ -124,6 +128,7 @@ export default class Distributor extends Service {
 
     this.options = options
     this.server = new HttpServer()
+    this.devTool = new DevTool(this.options)
     this.sockets = []
   }
 
@@ -136,15 +141,15 @@ export default class Distributor extends Service {
   public async connect (tunnel: HttpServerTunnel): Promise<void> {
     const { conn, feedback } = tunnel
     const { request } = conn
-    const { serverUrl, socketId } = await this.transfer(request)
+    const { serverUrl, socketId, projectId } = await this.transfer(request)
 
     let index = this.sockets.findIndex((item) => item.url === serverUrl)
     if (-1 !== index) {
       return
     }
 
-    const log = (message: string) => this.log(message, socketId)
-    const socket = await this.createSocket(socketId, serverUrl)
+    const log = (message: string) => this.log(message, projectId)
+    const socket = await this.createSocket(projectId, serverUrl, this.devTool)
     log(`Socket connected successfully`)
 
     const disconnect = () => {
@@ -156,7 +161,7 @@ export default class Distributor extends Service {
 
     socket.on('disconnect', disconnect)
 
-    const data = { socketId }
+    const data = { socketId, projectId }
     socket.send('connectSuccess', { data })
 
     this.sockets.push({ url: serverUrl, socket })
@@ -164,8 +169,8 @@ export default class Distributor extends Service {
     feedback()
   }
 
-  private async createSocket (id, url: string) {
-    let socket = new SocketClient(id, this.options)
+  private async createSocket (id: string, url: string, devTool: DevTool) {
+    let socket = new SocketClient(id, this.options, devTool)
     await socket.start(url)
     return socket
   }

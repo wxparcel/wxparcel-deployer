@@ -6,7 +6,6 @@ import { Server as HttpServer } from 'http'
 import { Server as SocketServer, Socket } from 'socket.io'
 import {
   StandardResponse,
-  Feedback,
   WebSocketEevent,
   WebSocketRequestMessage,
   WebSocketResponseMessage,
@@ -66,12 +65,12 @@ export default class WebSocketServer extends Service {
   public async login (tunnel: WebSocketTunnel): Promise<void> {
     const { feedback, socket } = tunnel
 
-    const task = () => {
+    const command = (killToken: symbol) => {
       const qrcode = (qrcode: Buffer) => this.feedback(socket as Socket, 'qrcode', { data: qrcode })
-      return this.devTool.login(qrcode)
+      return this.devTool.login(qrcode, killToken)
     }
 
-    await this.execute(task).catch((error) => {
+    await this.execute(command).catch((error) => {
       if (error.code === 255) {
         feedback({ status: 408, message: 'Login fail' })
         return Promise.reject(error)
