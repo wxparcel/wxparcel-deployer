@@ -125,6 +125,10 @@ export default class Service {
     }
   }
 
+  public getQueue (): Array<Promise<any>> {
+    return [].concat(this.queue)
+  }
+
   public destory (): void {
     this.queue && this.queue.splice(0)
 

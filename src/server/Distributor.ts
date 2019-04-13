@@ -1,5 +1,6 @@
 import SocketIO = require('socket.io-client')
 import forEach = require('lodash/forEach')
+import flatten = require('lodash/flatten')
 import { IncomingForm } from 'formidable'
 import { ServerOptions } from '../libs/OptionManager'
 import HttpServer from '../libs/http/Server'
@@ -122,7 +123,7 @@ export default class Distributor extends Service {
   private options: ServerOptions
   private server: HttpServer
   private devTool: DevTool
-  private sockets: Array<{ url: string, socket: SocketClient }>
+  private socket: SocketClient
 
   constructor (options: ServerOptions) {
     super()
@@ -130,7 +131,6 @@ export default class Distributor extends Service {
     this.options = options
     this.server = new HttpServer()
     this.devTool = new DevTool(this.options)
-    this.sockets = []
   }
 
   public async start (): Promise<void> {
@@ -144,19 +144,12 @@ export default class Distributor extends Service {
     const { request } = conn
     const { serverUrl, socketId, projectId } = await this.transfer(request)
 
-    let index = this.sockets.findIndex((item) => item.url === serverUrl)
-    if (-1 !== index) {
-      return
-    }
-
     const log = (message: string) => this.log(message, projectId)
     const socket = await this.createSocket(projectId, serverUrl, this.devTool)
     log(`Socket connected successfully`)
 
     const disconnect = () => {
-      let index = this.sockets.findIndex((item) => item.socket === socket)
-      this.sockets.splice(index, 1)
-
+      this.socket = null
       log(`Socket has been disconnect and destory`)
     }
 
@@ -164,8 +157,6 @@ export default class Distributor extends Service {
 
     const data = { socketId, projectId }
     socket.send('connectSuccess', { data })
-
-    this.sockets.push({ url: serverUrl, socket })
 
     feedback()
   }
@@ -219,12 +210,10 @@ export default class Distributor extends Service {
   }
 
   public destory () {
-    let sockets = this.sockets.splice(0)
-    sockets.forEach(({ socket }) => socket.destory())
     this.server.close()
 
     this.options = undefined
     this.server = undefined
-    this.sockets = undefined
+    this.socket = undefined
   }
 }
