@@ -9,7 +9,7 @@ import Server from '../libs/http/Server'
 import Service from '../libs/Service'
 import { ensureDirs, removeFiles, unzip } from '../share/fns'
 import { Server as HttpServer, IncomingMessage } from 'http'
-import { CommandError, StandardResponse, Feedback } from '../typings'
+import { CommandError, StandardResponse, HttpServerTunnel } from '../typings'
 
 export default class HttpService extends Service {
   private options: ServerOptions
@@ -24,38 +24,31 @@ export default class HttpService extends Service {
     this.options = options
     this.devTool = new DevTool(this.options)
     this.server = new Server()
+  }
+
+  public async start (): Promise<void> {
+    const { port } = this.options
 
     this.route('GET', '/status', this.status.bind(this))
     this.route('POST', '/upload', this.upload.bind(this))
     this.route('GET', '/login', this.login.bind(this))
     this.route('GET', '/checkin', this.checkin.bind(this))
-  }
 
-  public route (methods: string | Array<string>, path: string, handle: (params: any, conn: Connection, feedback: Feedback) => void) {
-    const router = async (params: RegExpExecArray, conn: Connection) => {
-      const feedback = this.feedback.bind(this, conn)
-      await handle(params, conn, feedback)
-    }
-
-    this.server.route(methods, path, router)
-  }
-
-  public async start (): Promise<void> {
-    const { port } = this.options
     return this.server.listen(port)
   }
 
-  public async status (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
+  public async status (tunnel: HttpServerTunnel): Promise<void> {
+    const { feedback } = tunnel
     feedback({ message: 'okaya, server is running.' })
   }
 
-  public async upload (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
-    const { request } = conn
+  public async upload (tunnel: HttpServerTunnel): Promise<void> {
+    const { conn, feedback, log } = tunnel
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
 
+    const { request } = conn
     const { file: uploadFile, uid, appid, version, message, compileType, libVersion, projectname } = await this.transfer(request)
-    const log = (message: string) => this.log(message, uid || 'anonymous')
     log(`Upload completed. Version ${chalk.bold(version)} Appid ${chalk.bold(appid)} CompileType ${chalk.bold(compileType)} LibVersion ${chalk.bold(libVersion)} ProjectName ${chalk.bold(projectname)}`)
 
     const uploadFileName = appid || uid || path.basename(uploadFile).replace(path.extname(uploadFile), '')
@@ -88,7 +81,9 @@ export default class HttpService extends Service {
     feedback({ message: 'Upload completed' })
   }
 
-  public async login (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
+  public async login (tunnel: HttpServerTunnel): Promise<void> {
+    const { conn, feedback } = tunnel
+
     const command = (): Promise<any> => new Promise((resolve) => {
       const completed = (qrcode: Buffer) => {
         feedback({ data: qrcode })
@@ -111,7 +106,8 @@ export default class HttpService extends Service {
     await this.execute(command)
   }
 
-  public async checkin (_: RegExpExecArray, conn: Connection, feedback: Feedback): Promise<void> {
+  public async checkin (tunnel: HttpServerTunnel): Promise<void> {
+    const { conn, feedback } = tunnel
     const { request } = conn
     const { login: promise } = this.promises
 
@@ -137,6 +133,19 @@ export default class HttpService extends Service {
     }
 
     promise.then(completed).catch(catchError)
+  }
+
+  public route (methods: string | Array<string>, path: string, handle: (tunnel: HttpServerTunnel) => Promise<void>) {
+    const router = async (params: RegExpExecArray, conn: Connection) => {
+      const feedback = this.feedback.bind(this, conn)
+      const log = (message: string) => this.log(message, 'anonymous')
+
+      await handle({ params, conn, feedback, log }).catch((error) => {
+        return Promise.reject(error)
+      })
+    }
+
+    this.server.route(methods, path, router)
   }
 
   public getServer (): HttpServer {

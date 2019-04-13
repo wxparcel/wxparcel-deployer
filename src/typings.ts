@@ -1,5 +1,7 @@
 import HttpConnection from './libs/http/Connection'
-import { Socket } from 'socket.io'
+import SocketConnection from './libs/socket/Connection'
+import { Socket as WebSocket } from 'socket.io'
+import { Socket as WebSocketClient } from 'socket.io-client'
 
 export type Stdout = (data: Buffer, type?: string) => void
 
@@ -27,6 +29,25 @@ export type Feedback = (content?: StandardResponse) => void
 export type HTTPServerRoute = (connection: HttpConnection) => Promise<any>
 export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
 
+export interface ServerTunnel {
+  feedback: Feedback
+  log: (message: string) => void
+}
+
+export interface HttpServerTunnel extends ServerTunnel {
+  params: any
+  conn: HttpConnection
+}
+
+export interface SocketServerTunnel extends ServerTunnel {
+  socket: SocketConnection
+}
+
+export interface WebSocketTunnel extends ServerTunnel {
+  payload: any
+  socket: WebSocket | typeof WebSocketClient
+}
+
 // websocket server
 // -----------------
 
@@ -42,7 +63,7 @@ export interface WebSocketResponseMessage {
 
 export interface WebSocketEevent {
   type: string
-  action: (socket: Socket, action: string, payload: any) => Promise<any>
+  action: (socket: WebSocket | typeof WebSocketClient, action: string, payload: any) => Promise<any>
 }
 
 // logger

@@ -3,7 +3,7 @@ import Connection from '../libs/socket/Connection'
 import SocketServer from '../libs/socket/Server'
 import Service from '../libs/Service'
 import DevTool from '../libs/DevTool'
-import { StandardResponse, Feedback } from '../typings'
+import { StandardResponse, SocketServerTunnel } from '../typings'
 
 export default class SocketService extends Service {
   private options: ServerOptions
@@ -16,21 +16,25 @@ export default class SocketService extends Service {
     this.options = options
     this.devTool = new DevTool(this.options)
     this.server = new SocketServer()
-
-    this.listen('login', this.login.bind(this))
-    this.listen('status', this.status.bind(this))
   }
 
   public async start (): Promise<void> {
     const { port } = this.options
+
+    this.listen('login', this.login.bind(this))
+    this.listen('status', this.status.bind(this))
+
     return this.server.listen(port)
   }
 
-  public async status (_: Connection, feedback: Feedback): Promise<void> {
+  public async status (tunnel: SocketServerTunnel): Promise<void> {
+    const { feedback } = tunnel
     feedback({ message: 'okaya, server is running.' })
   }
 
-  public async login (socket: Connection, feedback: Feedback): Promise<void> {
+  public async login (tunnel: SocketServerTunnel): Promise<void> {
+    const { socket, feedback } = tunnel
+
     const task = () => {
       const qrcode = (qrcode: Buffer) => socket.send('qrcode', qrcode)
       return this.devTool.login(qrcode)
@@ -45,10 +49,14 @@ export default class SocketService extends Service {
     feedback()
   }
 
-  public listen (event: string, handle: (socket: Connection, feedback: Feedback) => Promise<void>) {
+  public listen (event: string, handle: (tunnel: SocketServerTunnel) => Promise<void>) {
     const listen = async (socket: Connection) => {
       const feedback = this.feedback.bind(this, socket, event)
-      await handle(socket, feedback)
+      const log = this.log.bind(this)
+
+      await handle({ socket, feedback, log }).catch((error) => {
+        return Promise.reject(error)
+      })
     }
 
     this.server.onMessage(event, listen)

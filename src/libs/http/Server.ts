@@ -5,14 +5,17 @@ import Connection from './Connection'
 import stdoutServ from '../../services/stdout'
 import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http'
 import { HTTPServerRoute, HTTPServerRouteHandler } from '../../typings'
+import Service from '../Service'
 
 export default class Server {
   private routes: Array<HTTPServerRoute>
   public server: HttpServer
+  private service: Service
 
   constructor () {
     this.routes = []
     this.server = http.createServer(this.connect.bind(this))
+    this.service = new Service()
   }
 
   public route (methods: string | Array<string>, route: string, handle: HTTPServerRouteHandler): void {
@@ -32,7 +35,8 @@ export default class Server {
         connection.setCros()
 
         if (connection.status !== 200) {
-          connection.writeJson()
+          let repsonse = this.service.standard(connection)
+          connection.writeJson(repsonse)
           connection.destroy()
           return true
         }
@@ -43,8 +47,9 @@ export default class Server {
         } catch (error) {
           stdoutServ.error(error)
 
-          connection.setStatus(500)
-          connection.writeJson({ message: error.message })
+          let data = { status: 500, message: error.message }
+          let repsonse = this.service.standard(data)
+          connection.writeJson(repsonse)
           connection.destroy()
         }
 
@@ -90,16 +95,19 @@ export default class Server {
         const datetime = new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '')
         stdoutServ.warn(`[${chalk.gray('MISS')}][${chalk.green.bold(method.toUpperCase())}] ${url} ${datetime}`)
 
-        connection.setStatus(404)
-        connection.writeJson()
+        let data = { status: 404 }
+        let repsonse = this.service.standard(data)
+        connection.writeJson(repsonse)
       }
 
       response.finished || response.end()
 
     } catch (error) {
       connection.setCros()
-      connection.setStatus(500)
-      connection.writeJson()
+
+      let data = { status: 500 }
+      let repsonse = this.service.standard(data)
+      connection.writeJson(repsonse)
     }
   }
 
@@ -125,8 +133,10 @@ export default class Server {
   public destory () {
     this.routes.splice(0)
     this.server.close()
+    this.service.destory()
 
     this.routes = undefined
     this.server = undefined
+    this.service = undefined
   }
 }

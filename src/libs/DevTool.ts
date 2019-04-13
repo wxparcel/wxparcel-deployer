@@ -69,7 +69,7 @@ export default class DevTool {
    *
    * @param qrcodeCallback 二维码处理回调
    */
-  public async login (qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
+  public async login (qrcodeCallback: DevToolQRCodeHandle, killToken?: symbol): Promise<any> {
     const { uid, qrcodePath } = this.options
     const qrcodeFile = path.join(qrcodePath, uid)
 
@@ -90,7 +90,7 @@ export default class DevTool {
       return this.command(params, null, null, killToken)
     }
 
-    const response = await this.execute(task)
+    const response = await this.execute(task, killToken)
     if (response.status !== 'SUCCESS') {
       return Promise.reject(new Error(response.error))
     }
@@ -104,7 +104,7 @@ export default class DevTool {
    * @param folder 项目文件夹
    * @param qrcodeCallback 二维码处理回调
    */
-  public async preview (folder: string, qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
+  public async preview (folder: string, qrcodeCallback: DevToolQRCodeHandle, killToken?: symbol): Promise<any> {
     const task = async (statsFile) => {
       const valid = validProject(folder)
       if (valid !== true) {
@@ -147,7 +147,7 @@ export default class DevTool {
       }
     }
 
-    return this.execute(task)
+    return this.execute(task, killToken)
   }
 
   /**
@@ -157,7 +157,7 @@ export default class DevTool {
    * @param version 发布版本号
    * @param description 发布描述
    */
-  public async upload (folder: string, version: string, description: string): Promise<any> {
+  public async upload (folder: string, version: string, description: string, killToken?: symbol): Promise<any> {
     const task = async (statsFile) => {
       const valid = validProject(folder)
       if (valid !== true) {
@@ -185,7 +185,7 @@ export default class DevTool {
       }
     }
 
-    return this.execute(task)
+    return this.execute(task, killToken)
   }
 
   /**
@@ -220,7 +220,7 @@ export default class DevTool {
    *
    * @param folder 项目文件夹
    */
-  public async autoPreview (folder: string): Promise<any> {
+  public async autoPreview (folder: string, killToken?: symbol): Promise<any> {
     const task = async (statsFile) => {
       const valid = validProject(folder)
       if (valid !== true) {
@@ -245,7 +245,7 @@ export default class DevTool {
       }
     }
 
-    return this.execute(task)
+    return this.execute(task, killToken)
   }
 
   /**
@@ -291,22 +291,13 @@ export default class DevTool {
     }
   }
 
-  public destory () {
-    let warders = this.warders.splice(0)
-    warders.forEach((warder) => warder.kill())
-
-    this.options = undefined
-    this.request = undefined
-    this.warders = undefined
-  }
-
-  private async execute (task: (statsFile: string, killToken: symbol) => Promise<any>) {
+  private async execute (task: (statsFile: string, killToken: symbol) => Promise<any>, killToken?: symbol) {
     const { tempPath, uid } = this.options
 
     let statsFile = path.join(tempPath, `./stats/${uid}.json`)
     fs.ensureFileSync(statsFile)
 
-    let killToken = genKillToken()
+    killToken = killToken || genKillToken()
     let catchError = (error) => {
       this.kill(killToken)
 
@@ -409,5 +400,14 @@ export default class DevTool {
       this.warders[index].kill()
       this.warders.splice(index, 1)
     }
+  }
+
+  public destory () {
+    let warders = this.warders.splice(0)
+    warders.forEach((warder) => warder.kill())
+
+    this.options = undefined
+    this.request = undefined
+    this.warders = undefined
   }
 }

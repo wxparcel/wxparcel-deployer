@@ -9,6 +9,7 @@ import stdoutServ from '../services/stdout'
 import HttpServ from '../server/Http'
 import SocketServ from '../server/Socket'
 import WebSocketServ from '../server/WebSocket'
+import DistributorServ from '../server/Distributor'
 import * as pkg from '../../package.json'
 import { ServerCLIOptions } from '../typings'
 
@@ -47,14 +48,22 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const logger = new Logger({ type: globalOptions.logType })
   logger.listen(stdoutServ)
 
-  const server = options.hasOwnProperty('socket')
-    ? new SocketServ(globalOptions)
-    : new HttpServ(globalOptions)
+  const server = (() => {
+    if (options.hasOwnProperty('socket')) {
+      let server = new SocketServ(globalOptions)
+      return server
+    }
 
-  if (server instanceof HttpServ) {
+    if (options.hasOwnProperty('distributor')) {
+      let server = new DistributorServ(globalOptions)
+      return server
+    }
+
+    let server = new HttpServ(globalOptions)
     let webSocket = new WebSocketServ(globalOptions)
     webSocket.start(server.getServer())
-  }
+    return server
+  })()
 
   await server.start().catch((error) => {
     stdoutServ.error(error)
@@ -93,5 +102,6 @@ program
 .option('-p, --port <port>', 'setting server port, default use idle port')
 .option('--dev-tool-cli <devToolCli>', 'setting devtool cli file path')
 .option('--dev-tool-serv <devToolServ>', 'setting devtool server url')
-.option('--socket', 'setting devtool server url')
+.option('--socket', 'setting socket mode')
+.option('--distributor', 'setting distributor mode')
 .action(server)

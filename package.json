@@ -28,6 +28,7 @@
     "compile:watch": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5 --watch",
     "server": "npm run compile && nodemon --exec \"node ./libs/cli.js server\" --watch libs --ext js",
     "server:socket": "npm run compile && nodemon --exec \"node ./libs/cli.js server --socket\" --watch libs --ext js",
+    "server:distributor": "npm run compile && nodemon --exec \"node ./libs/cli.js server --distributor\" --watch libs --ext js",
     "develop": "concurrently \"npm run compile:watch\" \"npm run server\"",
     "release": "npm run compile",
     "socket": "concurrently \"npm run compile:watch\" \"npm run server:socket\"",
@@ -48,6 +49,7 @@
     "@types/portscanner": "^2.1.0",
     "@types/shortid": "^0.0.29",
     "@types/socket.io": "^2.1.2",
+    "@types/socket.io-client": "^1.4.32",
     "concurrently": "^4.1.0",
     "lint-staged": "^7.2.2",
     "nodemon": "^1.18.10",
@@ -74,6 +76,7 @@
     "pretty-error": "^2.1.1",
     "shortid": "^2.2.14",
     "socket.io": "^2.2.0",
+    "socket.io-client": "^2.2.0",
     "terminal-image": "^0.1.2"
   }
 }

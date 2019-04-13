@@ -43,15 +43,10 @@ export default class Server {
     this.queue.splice(index, 1)
   }
 
-  public log (message: string, ...args): void {
+  public log (message: string, ...args: Array<string>): void {
     const prefix = args.map((value) => `[${chalk.green.bold(value)}]`)
     const datetime = chalk.gray(new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''))
     stdoutServ.info(`${prefix} ${message} ${datetime}`)
-  }
-
-  public destory (): void {
-    this.queue.splice(0)
-    this.queue = undefined
   }
 
   public standard (content: StandardResponse): StandardResponse {
@@ -91,13 +86,13 @@ export default class Server {
     switch (error.code) {
       case 255: {
         let status = 401
-        let message = 'You don\'t have permission to upload'
+        let message = 'You don\'t have permission'
         return { status, message }
       }
 
       case -408: {
         let status = 408
-        let message = 'Upload timeout, please retry'
+        let message = 'Operation timeout, please retry'
         return { status, message }
       }
 
@@ -107,5 +102,10 @@ export default class Server {
         return { status, message }
       }
     }
+  }
+
+  public destory (): void {
+    this.queue && this.queue.splice(0)
+    this.queue = undefined
   }
 }

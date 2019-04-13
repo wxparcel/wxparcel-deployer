@@ -52,7 +52,7 @@ export default class Connection {
     this.status = status
   }
 
-  public writeJson (response?: StandardResponse): void {
+  public writeJson (response: StandardResponse = {}): void {
     if (this.flush === true) {
       return
     }

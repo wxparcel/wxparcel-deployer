@@ -9,7 +9,8 @@ import {
   Feedback,
   WebSocketEevent,
   WebSocketRequestMessage,
-  WebSocketResponseMessage
+  WebSocketResponseMessage,
+  WebSocketTunnel
 } from '../typings'
 
 export default class WebSocketServer extends Service {
@@ -24,9 +25,6 @@ export default class WebSocketServer extends Service {
     this.options = options
     this.devTool = new DevTool(this.options)
     this.events = []
-
-    this.register('checkStatus', this.status.bind(this))
-    this.register('login', this.login.bind(this))
   }
 
   public async start (httpServer?: HttpServer): Promise<void> {
@@ -54,26 +52,47 @@ export default class WebSocketServer extends Service {
       socket.on('deploy', onMessage)
     }
 
+    this.listen('checkStatus', this.status.bind(this))
+    this.listen('login', this.login.bind(this))
+
     this.server.on('connection', connection)
   }
 
-  public async status (_: WebSocketRequestMessage, feedback: Feedback): Promise<void> {
+  public async status (tunnel: WebSocketTunnel): Promise<void> {
+    const { feedback } = tunnel
     feedback({ message: 'okaya, server is running.' })
   }
 
-  public async login (_: WebSocketRequestMessage, feedback: Feedback, socket: Socket): Promise<void> {
+  public async login (tunnel: WebSocketTunnel): Promise<void> {
+    const { feedback, socket } = tunnel
+
     const task = () => {
-      const qrcode = (qrcode: Buffer) => this.feedback(socket, 'qrcode', { data: qrcode })
+      const qrcode = (qrcode: Buffer) => this.feedback(socket as Socket, 'qrcode', { data: qrcode })
       return this.devTool.login(qrcode)
     }
 
     await this.execute(task).catch((error) => {
+      if (error.code === 255) {
+        feedback({ status: 408, message: 'Login fail' })
+        return Promise.reject(error)
+      }
+
       let { status, message } = this.resolveCommandError(error)
       feedback({ status, message })
       return Promise.reject(error)
     })
 
-    feedback({})
+    feedback()
+  }
+
+  public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>): void {
+    const action = async (socket: Socket, action: string, payload: any): Promise<any> => {
+      const feedback = this.feedback.bind(this, socket, action)
+      const log = this.log.bind(this)
+      return listener({ payload, feedback, socket, log })
+    }
+
+    this.events.push({ type, action })
   }
 
   private feedback (socket: Socket, type: string, data: StandardResponse = {}): void {
@@ -83,15 +102,6 @@ export default class WebSocketServer extends Service {
     }
 
     socket.emit('deploy', params)
-  }
-
-  private register (type: string, listener: (payload: any, feedback: Feedback, socket: Socket) => Promise<any>): void {
-    const action = async (socket: Socket, action: string, payload: any): Promise<any> => {
-      const feedback = this.feedback.bind(this, socket, action)
-      return listener(payload, feedback, socket)
-    }
-
-    this.events.push({ type, action })
   }
 
   public destory (): void {
