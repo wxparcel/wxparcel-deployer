@@ -62,7 +62,7 @@ export default class Client {
     }
 
     let message = ''
-    await spawnPromisify('git', ['log', '-1', '--format=%B%cd'], {}, (buffer, type) => {
+    await spawnPromisify('git', ['log', '-1', '--format=%an%n%ae%n%cd%n%h%n%B'], {}, (buffer, type) => {
       if (type === 'out') {
         message += buffer.toString()
       }

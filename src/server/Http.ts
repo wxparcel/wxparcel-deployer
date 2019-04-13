@@ -46,15 +46,17 @@ export default class HttpService extends Service {
   }
 
   public async upload (tunnel: HttpServerTunnel): Promise<void> {
-    const { conn, feedback, log } = tunnel
+    const { conn, feedback } = tunnel
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
 
     const { request } = conn
-    const { file: uploadFile, uid, appid, version, message, compileType, libVersion, projectname } = await this.transfer(request)
-    log(`Upload completed. Version ${chalk.bold(version)} Appid ${chalk.bold(appid)} CompileType ${chalk.bold(compileType)} LibVersion ${chalk.bold(libVersion)} ProjectName ${chalk.bold(projectname)}`)
+    const requestData = await this.transfer(request)
+    const { file: uploadFile, appid, version, message } = requestData
+    const log = (message: string) => this.log(message, appid)
+    log('Upload completed.')
 
-    const uploadFileName = appid || uid || path.basename(uploadFile).replace(path.extname(uploadFile), '')
+    const uploadFileName = appid || path.basename(uploadFile).replace(path.extname(uploadFile), '')
     const projFolder = path.join(deployPath, uploadFileName)
     const unzipPromises = await unzip(uploadFile, projFolder)
 
@@ -150,9 +152,8 @@ export default class HttpService extends Service {
 
   public route (methods: string | Array<string>, path: string, handle: (tunnel: HttpServerTunnel) => Promise<void>) {
     const router = async (params: RegExpExecArray, conn: Connection) => {
-      const { uid } = await this.transfer(conn.request)
       const feedback = this.feedback.bind(this, conn)
-      const log = (message: string) => this.log(message, uid || 'anonymous')
+      const log = (message: string) => this.log(message)
 
       await handle({ params, conn, feedback, log }).catch((error) => {
         return Promise.reject(error)

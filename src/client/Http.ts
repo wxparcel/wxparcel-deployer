@@ -53,10 +53,13 @@ export default class HttpClient extends Client {
   public async upload (folder: string, version: string, message: string, url: string = '/upload'): Promise<any> {
     let repoUrl = await this.getGitRepo(folder)
     let getLog = await this.getGitMessage(folder)
-    let [gitMessage, gitDatetime] = getLog.split('\n')
+    let [gitUser, gitEmail, gitDatetime, gitHash, gitMessage] = getLog.split('\n')
 
-    gitMessage = gitMessage || ''
+    gitUser = gitUser || ''
+    gitEmail = gitEmail || ''
     gitDatetime = gitDatetime || new Date() + ''
+    gitHash = gitHash || ''
+    gitMessage = gitMessage || ''
     message = message || gitMessage
 
     const { releasePath } = this.options
@@ -67,7 +70,10 @@ export default class HttpClient extends Client {
 
     let datas = {
       repoUrl,
+      gitUser,
+      gitEmail,
       gitMessage,
+      gitHash,
       gitDatetime,
       appid,
       version,
@@ -112,7 +118,6 @@ export default class HttpClient extends Client {
       }
 
       const contentSzie = await promisify(formData.getLength.bind(formData))().catch(catchError)
-
       const headers = {
         'Accept': 'application/json',
         'Content-Type': `multipart/form-data; charset=utf-8; boundary="${formData.getBoundary()}"`,

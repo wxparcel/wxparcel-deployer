@@ -306,7 +306,7 @@ export default class DevTool {
     let excePromise = task(statsFile, killToken)
 
     const success = (response) => {
-      let { content } = response
+      let [content] = response
       fs.removeSync(statsFile)
       return JSON.parse(content.toString())
     }

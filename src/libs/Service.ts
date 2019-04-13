@@ -67,7 +67,7 @@ export default class Service {
   public log (message: string, ...args: Array<string>): void {
     const prefix = args.map((value) => `[${chalk.green.bold(value)}]`)
     const datetime = chalk.gray(new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''))
-    stdoutServ.info(`${prefix} ${message} ${datetime}`)
+    stdoutServ.info(`${prefix.length ? prefix.join(' ') + ' ' : ''}${message && message + ' '}${datetime}`)
   }
 
   public standard (content: StandardResponse): StandardResponse {
