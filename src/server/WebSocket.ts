@@ -11,6 +11,7 @@ import {
   WebSocketResponseMessage,
   WebSocketTunnel
 } from '../typings'
+import { killProcess } from '../share/fns'
 
 export default class WebSocketServer extends Service {
   private options: ServerOptions
@@ -65,21 +66,38 @@ export default class WebSocketServer extends Service {
   public async login (tunnel: WebSocketTunnel): Promise<void> {
     const { feedback, socket } = tunnel
 
-    const command = (killToken: symbol) => {
-      const qrcode = (qrcode: Buffer) => this.feedback(socket as Socket, 'qrcode', { data: qrcode })
-      return this.devTool.login(qrcode, killToken)
-    }
+    let retryTimes = 0
+    const execute = () => {
+      const command = (killToken: symbol) => {
+        const qrcode = (qrcode: Buffer) => {
+          if (qrcode.byteLength === 0) {
+            killProcess(killToken)
+            return
+          }
 
-    await this.execute(command).catch((error) => {
-      if (error.code === 255) {
-        feedback({ status: 408, message: 'Login fail' })
-        return Promise.reject(error)
+          this.feedback(socket as Socket, 'qrcode', { data: qrcode })
+        }
+
+        return this.devTool.login(qrcode, killToken)
       }
 
-      let { status, message } = this.resolveCommandError(error)
-      feedback({ status, message })
-      return Promise.reject(error)
-    })
+      return this.execute(command).catch((error) => {
+        if (error.message === 'Process has been killed' && retryTimes ++ <= 3) {
+          return this.devTool.quit().then(() => execute())
+        }
+
+        if (error.code === 255) {
+          feedback({ status: 408, message: 'Login fail' })
+          return Promise.reject(error)
+        }
+
+        let { status, message } = this.resolveCommandError(error)
+        feedback({ status, message })
+        return Promise.reject(error)
+      })
+    }
+
+    await execute()
 
     feedback()
   }
@@ -103,8 +121,8 @@ export default class WebSocketServer extends Service {
     socket.emit('deploy', params)
   }
 
-  public destory (): void {
-    super.destory()
+  public destroy (): void {
+    super.destroy()
     this.server.close()
 
     this.devTool = undefined

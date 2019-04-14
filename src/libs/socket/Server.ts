@@ -36,7 +36,7 @@ export default class Server {
     this.server.close()
   }
 
-  public destory (): void {
+  public destroy (): void {
     this.listeners.splice(0)
     this.server.close()
 

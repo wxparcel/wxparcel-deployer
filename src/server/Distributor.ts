@@ -66,7 +66,7 @@ export class SocketClient extends Service {
         resolve()
       }
 
-      const disconnect = () => this.destory()
+      const disconnect = () => this.destroy()
 
       this.socket.on('connect', connection)
       this.socket.on('connect_error', reject)
@@ -106,8 +106,10 @@ export class SocketClient extends Service {
     socket.emit('deploy', params)
   }
 
-  public destory (): void {
-    super.destory()
+  public destroy (): void {
+    this.destroy = Function.prototype as any
+
+    super.destroy()
 
     this.socket.disconnect()
     this.socket.removeAllListeners()
@@ -145,7 +147,7 @@ export default class Distributor extends Service {
     const { request } = conn
     const { serverUrl, socketId, projectId } = await this.transfer(request)
 
-    this.socket && this.socket.destory()
+    this.socket && this.socket.destroy()
 
     const log = (message: string) => this.log(message, projectId)
     this.socket = await this.createSocket(projectId, serverUrl, this.devTool)
@@ -153,7 +155,7 @@ export default class Distributor extends Service {
 
     const disconnect = () => {
       this.socket = null
-      log(`Socket has been disconnect and destory`)
+      log(`Socket has been disconnected and destroyed`)
     }
 
     const data = { socketId, projectId }
@@ -213,8 +215,8 @@ export default class Distributor extends Service {
     conn.writeJson(response)
   }
 
-  public destory () {
-    this.server.destory()
+  public destroy () {
+    this.server.destroy()
 
     this.options = undefined
     this.server = undefined

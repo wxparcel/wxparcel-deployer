@@ -22,7 +22,6 @@ export default class Service {
     this.queue.length > 0 && await Promise.all(this.queue)
 
     const killToken = genKillToken()
-
     const removeKillToken = (killToken: symbol) => {
       if (Array.isArray(this.killTokens)) {
         let index = this.killTokens.findIndex((token) => token === killToken)
@@ -131,7 +130,7 @@ export default class Service {
     return [].concat(this.queue)
   }
 
-  public destory (): void {
+  public destroy (): void {
     if (Array.isArray(this.queue)) {
       this.queue.splice(0)
     }

@@ -32,13 +32,11 @@ export default class Connection extends EventEmitter {
     this.belongings = assign(this.belongings, datas)
   }
 
-  public destroy () {
-    this.removeAllListeners()
+  public destroy (): void {
+    this.destroy = Function.prototype as any
 
-    if (this.socket) {
-      this.socket.removeAllListeners()
-      this.socket.destroy()
-    }
+    this.socket.removeAllListeners()
+    this.socket.destroy()
 
     this.socket = undefined
     this.listeners = undefined

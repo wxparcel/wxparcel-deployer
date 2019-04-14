@@ -407,7 +407,7 @@ export default class DevTool {
     }
   }
 
-  public destory () {
+  public destroy () {
     let warders = this.warders.splice(0)
     warders.forEach((warder) => warder.kill())
 

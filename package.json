@@ -32,6 +32,7 @@
     "develop": "concurrently \"npm run compile:watch\" \"npm run server\"",
     "release": "npm run compile",
     "socket": "concurrently \"npm run compile:watch\" \"npm run server:socket\"",
+    "distributor": "concurrently \"npm run compile:watch\" \"npm run server:distributor\"",
     "start": "npm run develop"
   },
   "devDependencies": {

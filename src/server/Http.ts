@@ -70,9 +70,14 @@ export default class HttpService extends Service {
       return this.devTool.upload(projFolder, version, message, killToken)
     }
 
+    let retryTimes = 0
     const catchError = (error: CommandError) => {
-      let { status, message } = this.resolveCommandError(error)
+      if (retryTimes ++ <= 3) {
+        log('Retry upload to weixin server')
+        return this.devTool.quit().then(() => this.execute(command).catch(catchError))
+      }
 
+      let { status, message } = this.resolveCommandError(error)
       conn.setStatus(status)
       feedback({ message })
 
@@ -198,8 +203,8 @@ export default class HttpService extends Service {
     conn.writeJson(response)
   }
 
-  public destory (): void {
-    super.destory()
+  public destroy (): void {
+    super.destroy()
 
     this.server.close()
 

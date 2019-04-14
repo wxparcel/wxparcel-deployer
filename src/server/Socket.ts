@@ -67,8 +67,8 @@ export default class SocketService extends Service {
     socket.send(eventType, response)
   }
 
-  public destory (): void {
-    super.destory()
+  public destroy (): void {
+    super.destroy()
 
     this.server.close()
 

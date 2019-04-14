@@ -82,7 +82,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
 
   let handleProcessSigint = process.exit.bind(process)
   let handleProcessExit = () => {
-    server && server.destory()
+    server && server.destroy()
 
     process.removeListener('exit', handleProcessExit)
     process.removeListener('SIGINT', handleProcessSigint)

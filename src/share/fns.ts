@@ -112,7 +112,7 @@ export const spawnPromisify = (cli: string, params?: Array<string>, options?: Sp
     if (killToken) {
       let token = killToken
       let kill = () => {
-        reject('Process has been killed')
+        reject(new Error('Process has been killed'))
         cp.kill('SIGINT')
       }
 
@@ -120,7 +120,7 @@ export const spawnPromisify = (cli: string, params?: Array<string>, options?: Sp
     }
 
     cp.on('exit', (code) => resolve(code))
-    cp.on('SIGINT', () => reject('Process has been killed'))
+    cp.on('SIGINT', () => reject(new Error('Process has been killed')))
 
     let handleProcessSigint = process.exit.bind(process)
     let handleProcessExit = () => {

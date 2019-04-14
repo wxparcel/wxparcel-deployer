@@ -130,10 +130,10 @@ export default class Server {
     }
   }
 
-  public destory () {
+  public destroy () {
     this.routes.splice(0)
     this.server.close()
-    this.service.destory()
+    this.service.destroy()
 
     this.routes = undefined
     this.server = undefined
