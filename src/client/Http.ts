@@ -64,7 +64,7 @@ export default class HttpClient extends Client {
 
     const { releasePath } = this.options
     const { appid, compileType, libVersion, projectname } = await this.getProjectConfig(folder)
-    const zipFile = path.join(releasePath, `${appid}.zip`)
+    const zipFile = path.join(releasePath, `${Date.now()}.zip`)
 
     await this.compress(folder, zipFile)
 

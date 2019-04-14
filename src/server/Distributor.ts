@@ -1,6 +1,5 @@
 import SocketIO = require('socket.io-client')
 import forEach = require('lodash/forEach')
-import flatten = require('lodash/flatten')
 import { IncomingForm } from 'formidable'
 import { ServerOptions } from '../libs/OptionManager'
 import HttpServer from '../libs/http/Server'
@@ -8,6 +7,7 @@ import Connection from '../libs/http/Connection'
 import DevTool from '../libs/DevTool'
 import Service from '../libs/Service'
 import WebSocketService from './WebSocket'
+import HttpService from './Http'
 import { IncomingMessage } from 'http'
 import { Socket } from 'socket.io-client'
 import {
@@ -110,8 +110,8 @@ export class SocketClient extends Service {
     super.destory()
 
     this.socket.disconnect()
-    this.socket.close()
     this.socket.removeAllListeners()
+    this.socket.close()
 
     this.devTool = undefined
     this.options = undefined
@@ -136,6 +136,7 @@ export default class Distributor extends Service {
   public async start (): Promise<void> {
     const { port } = this.options
     this.route('POST', '/connect', this.connect.bind(this))
+    this.route('POST', '/upload', this.upload.bind(this))
     return this.server.listen(port)
   }
 
@@ -149,7 +150,9 @@ export default class Distributor extends Service {
     log(`Socket connected successfully`)
 
     const disconnect = () => {
+      this.socket && this.socket.destory()
       this.socket = null
+
       log(`Socket has been disconnect and destory`)
     }
 
@@ -160,6 +163,8 @@ export default class Distributor extends Service {
 
     feedback()
   }
+
+  public upload = HttpService.prototype.upload
 
   private async createSocket (id: string, url: string, devTool: DevTool) {
     let socket = new SocketClient(id, this.options, devTool)
@@ -210,7 +215,7 @@ export default class Distributor extends Service {
   }
 
   public destory () {
-    this.server.close()
+    this.server.destory()
 
     this.options = undefined
     this.server = undefined
