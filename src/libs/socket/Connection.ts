@@ -35,8 +35,10 @@ export default class Connection extends EventEmitter {
   public destroy () {
     this.removeAllListeners()
 
-    this.socket.removeAllListeners()
-    this.socket.destroy()
+    if (this.socket) {
+      this.socket.removeAllListeners()
+      this.socket.destroy()
+    }
 
     this.socket = undefined
     this.listeners = undefined
