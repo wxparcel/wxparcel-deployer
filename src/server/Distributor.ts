@@ -106,6 +106,11 @@ export class SocketClient extends Service {
     socket.emit('deploy', params)
   }
 
+  public close () {
+    this.socket.disconnect()
+    this.socket.close()
+  }
+
   public destory (): void {
     super.destory()
 
@@ -145,22 +150,22 @@ export default class Distributor extends Service {
     const { request } = conn
     const { serverUrl, socketId, projectId } = await this.transfer(request)
 
-    this.socket && this.socket.destory()
+    this.socket && this.socket.close()
 
     const log = (message: string) => this.log(message, projectId)
-    const socket = await this.createSocket(projectId, serverUrl, this.devTool)
+    this.socket = await this.createSocket(projectId, serverUrl, this.devTool)
     log(`Socket connected successfully`)
 
     const disconnect = () => {
-      socket.destory()
+      this.socket.destory()
+      this.socket = null
+
       log(`Socket has been disconnect and destory`)
     }
 
     const data = { socketId, projectId }
-    socket.on('disconnect', disconnect)
-    socket.send('connectSuccess', { data })
-
-    this.socket = socket
+    this.socket.on('disconnect', disconnect)
+    this.socket.send('connectSuccess', { data })
 
     feedback()
   }
