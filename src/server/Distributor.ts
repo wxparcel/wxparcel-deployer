@@ -111,7 +111,6 @@ export class SocketClient extends Service {
 
     if (this.socket) {
       this.socket.disconnect()
-      this.socket.removeAllListeners()
       this.socket.close()
     }
 
