@@ -78,12 +78,12 @@ export default class WebSocketServer extends Service {
           this.feedback(socket as Socket, 'qrcode', { data: qrcode })
         }
 
-        return this.devTool.login(qrcode, killToken)
+        return this.devTool.quit().then(() => this.devTool.login(qrcode, killToken))
       }
 
       return this.execute(command).catch((error) => {
         if (error.message === 'Process has been killed' && retryTimes ++ <= 3) {
-          return this.devTool.quit().then(() => execute())
+          return execute()
         }
 
         if (error.code === 255) {
