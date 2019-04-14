@@ -109,10 +109,9 @@ export class SocketClient extends Service {
   public destory (): void {
     super.destory()
 
-    if (this.socket) {
-      this.socket.disconnect()
-      this.socket.close()
-    }
+    this.socket.disconnect()
+    this.socket.removeAllListeners()
+    this.socket.close()
 
     this.devTool = undefined
     this.options = undefined
@@ -153,9 +152,7 @@ export default class Distributor extends Service {
     log(`Socket connected successfully`)
 
     const disconnect = () => {
-      this.socket.destory()
       this.socket = null
-
       log(`Socket has been disconnect and destory`)
     }
 
