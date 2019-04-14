@@ -132,10 +132,14 @@ export default class Service {
   }
 
   public destory (): void {
-    this.queue && this.queue.splice(0)
+    if (Array.isArray(this.queue)) {
+      this.queue.splice(0)
+    }
 
-    let killTokens = this.killTokens.splice(0)
-    killTokens.forEach((killToken) => killProcess(killToken))
+    if (Array.isArray(this.killTokens)) {
+      let killTokens = this.killTokens.splice(0)
+      killTokens.forEach((killToken) => killProcess(killToken))
+    }
 
     this.queue = undefined
     this.killTokens = undefined

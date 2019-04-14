@@ -106,17 +106,14 @@ export class SocketClient extends Service {
     socket.emit('deploy', params)
   }
 
-  public close () {
-    this.socket.disconnect()
-    this.socket.close()
-  }
-
   public destory (): void {
     super.destory()
 
-    this.socket.disconnect()
-    this.socket.removeAllListeners()
-    this.socket.close()
+    if (this.socket) {
+      this.socket.disconnect()
+      this.socket.removeAllListeners()
+      this.socket.close()
+    }
 
     this.devTool = undefined
     this.options = undefined
@@ -150,7 +147,7 @@ export default class Distributor extends Service {
     const { request } = conn
     const { serverUrl, socketId, projectId } = await this.transfer(request)
 
-    this.socket && this.socket.close()
+    this.socket && this.socket.destory()
 
     const log = (message: string) => this.log(message, projectId)
     this.socket = await this.createSocket(projectId, serverUrl, this.devTool)
