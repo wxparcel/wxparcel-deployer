@@ -145,8 +145,10 @@ export default class Distributor extends Service {
     const { request } = conn
     const { serverUrl, socketId, projectId } = await this.transfer(request)
 
+    this.socket && this.socket.destory()
+
     const log = (message: string) => this.log(message, projectId)
-    const socket = await this.createSocket(projectId, serverUrl, this.devTool)
+    this.socket = await this.createSocket(projectId, serverUrl, this.devTool)
     log(`Socket connected successfully`)
 
     const disconnect = () => {
@@ -156,10 +158,10 @@ export default class Distributor extends Service {
       log(`Socket has been disconnect and destory`)
     }
 
-    socket.on('disconnect', disconnect)
+    this.socket.on('disconnect', disconnect)
 
     const data = { socketId, projectId }
-    socket.send('connectSuccess', { data })
+    this.socket.send('connectSuccess', { data })
 
     feedback()
   }
