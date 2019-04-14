@@ -82,7 +82,7 @@ export default class WebSocketServer extends Service {
       }
 
       return this.execute(command).catch((error) => {
-        if (error.message === 'Process has been killed' && retryTimes ++ <= 3) {
+        if (retryTimes ++ <= 3) {
           return execute()
         }
 
