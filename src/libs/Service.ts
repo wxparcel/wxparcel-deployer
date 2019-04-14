@@ -24,8 +24,10 @@ export default class Service {
     const killToken = genKillToken()
 
     const removeKillToken = (killToken: symbol) => {
-      let index = this.killTokens.findIndex((token) => token === killToken)
-      index === -1 && this.killTokens.splice(index, 1)
+      if (Array.isArray(this.killTokens)) {
+        let index = this.killTokens.findIndex((token) => token === killToken)
+        index === -1 && this.killTokens.splice(index, 1)
+      }
     }
 
     const promise = command(killToken)
