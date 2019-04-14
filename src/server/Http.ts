@@ -67,17 +67,14 @@ export default class HttpService extends Service {
 
     const command = (killToken: symbol) => {
       log('Start to upload to weixin server')
-
-      return this.devTool.quit().then(() => {
-        return this.devTool.upload(projFolder, version, message, killToken)
-      })
+      return this.devTool.upload(projFolder, version, message, killToken)
     }
 
     let retryTimes = 0
     const catchError = (error: CommandError) => {
-      if (error.message === 'Process has been killed' && retryTimes ++ <= 3) {
+      if (retryTimes ++ <= 3) {
         log('Retry upload to weixin server')
-        return this.execute(command).catch(catchError)
+        return this.devTool.quit().then(() => this.execute(command).catch(catchError))
       }
 
       let { status, message } = this.resolveCommandError(error)
