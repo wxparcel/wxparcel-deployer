@@ -78,7 +78,7 @@ export default class WebSocketServer extends Service {
           this.feedback(socket as Socket, 'qrcode', { data: qrcode })
         }
 
-        return this.devTool.quit().then(() => this.devTool.login(qrcode, killToken))
+        return this.devTool.login(qrcode, killToken)
       }
 
       return this.execute(command).catch((error) => {
