@@ -72,7 +72,7 @@ export default class HttpService extends Service {
 
     let retryTimes = 0
     const catchError = (error: CommandError) => {
-      if (retryTimes ++ <= 3) {
+      if (error.message === 'Process has been killed' && retryTimes ++ <= 3) {
         log('Retry upload to weixin server')
         return this.devTool.quit().then(() => this.execute(command).catch(catchError))
       }
