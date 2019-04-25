@@ -2,7 +2,7 @@ import fs = require('fs-extra')
 import path = require('path')
 import { SpawnOptions } from 'child_process'
 import axios, { AxiosInstance } from 'axios'
-import { ServerOptions } from './OptionManager'
+import OptionManager from '../server/OptionManager'
 import StdoutServ from '../services/stdout'
 import { validProject, findPages } from '../share/wx'
 import { spawnPromisify, killToken as genKillToken, killProcess } from '../share/fns'
@@ -18,11 +18,11 @@ const responseInterceptors = (response) => {
 }
 
 export default class DevTool {
-  private options: ServerOptions
+  private options: OptionManager
   private request: AxiosInstance
   private warders: Array<{ token: Symbol, kill: () => void }>
 
-  constructor (options: ServerOptions) {
+  constructor (options: OptionManager) {
     this.options = options
     this.warders = []
 
@@ -399,6 +399,10 @@ export default class DevTool {
   }
 
   private kill (killToken?: Symbol) {
+    if (!Array.isArray(this.warders)) {
+      return
+    }
+
     let index = this.warders.findIndex(({ token }) => token === killToken)
 
     if (index !== -1) {
@@ -407,12 +411,14 @@ export default class DevTool {
     }
   }
 
-  public destroy () {
+  public destroy (): void {
     let warders = this.warders.splice(0)
     warders.forEach((warder) => warder.kill())
 
     this.options = undefined
     this.request = undefined
     this.warders = undefined
+
+    this.destroy = Function.prototype as any
   }
 }

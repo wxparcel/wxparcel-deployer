@@ -1,46 +1,45 @@
 import SocketIO = require('socket.io')
-import { ServerOptions } from '../libs/OptionManager'
-import Service from '../libs/Service'
+import OptionManager from './OptionManager'
+import BaseService from '../libs/Service'
 import DevTool from '../libs/DevTool'
+import { killProcess } from '../share/fns'
+
 import { Server as HttpServer } from 'http'
 import { Server as SocketServer, Socket } from 'socket.io'
 import {
-  StandardResponse,
-  WebSocketEevent,
-  WebSocketRequestMessage,
-  WebSocketResponseMessage,
-  WebSocketTunnel
+  StandardJSONResponse,
+  WebSocketMessage, WebSocketEevent, WebSocketPayload, WebSocketTunnel
 } from '../typings'
-import { killProcess } from '../share/fns'
 
-export default class WebSocketServer extends Service {
-  private options: ServerOptions
+export default class Server extends BaseService {
+  private options: OptionManager
   private devTool: DevTool
   private server: SocketServer
   private events: Array<WebSocketEevent>
 
-  constructor (options: ServerOptions) {
+  constructor (options: OptionManager, devTool?: DevTool) {
     super()
 
     this.options = options
-    this.devTool = new DevTool(this.options)
+    this.devTool = devTool || new DevTool(this.options)
     this.events = []
   }
 
-  public async start (httpServer?: HttpServer): Promise<void> {
+  public async start (server?: HttpServer): Promise<void> {
     if (this.server) {
       return Promise.reject(new Error('Server is running'))
     }
 
-    if (httpServer instanceof HttpServer) {
-      this.server = SocketIO(httpServer)
+    if (server instanceof HttpServer) {
+      this.server = SocketIO(server)
+
     } else {
       const { port } = this.options
       this.server = SocketIO(port)
     }
 
     const connection = (socket: Socket) => {
-      const onMessage = (message: WebSocketRequestMessage) => {
+      const onMessage = (message: WebSocketMessage) => {
         const { action, payload } = message
         this.events.forEach((event) => {
           if (event.type === action) {
@@ -59,14 +58,12 @@ export default class WebSocketServer extends Service {
   }
 
   public async status (tunnel: WebSocketTunnel): Promise<void> {
-    const { feedback } = tunnel
-    feedback({ message: 'okaya, server is running.' })
+    tunnel.feedback({ message: 'okaya, server is running.' })
   }
 
   public async login (tunnel: WebSocketTunnel): Promise<void> {
-    const { feedback, socket } = tunnel
-
     let retryTimes = 0
+
     const execute = () => {
       const command = (killToken: symbol) => {
         const qrcode = (qrcode: Buffer) => {
@@ -75,7 +72,7 @@ export default class WebSocketServer extends Service {
             return
           }
 
-          this.feedback(socket as Socket, 'qrcode', { data: qrcode })
+          this.feedback(tunnel.socket as Socket, 'qrcode', { data: qrcode })
         }
 
         return this.devTool.login(qrcode, killToken)
@@ -87,35 +84,32 @@ export default class WebSocketServer extends Service {
         }
 
         if (error.code === 255) {
-          feedback({ status: 408, message: 'Login fail' })
+          tunnel.feedback({ status: 408, message: 'Login fail' })
           return Promise.reject(error)
         }
 
         let { status, message } = this.resolveCommandError(error)
-        feedback({ status, message })
+        tunnel.feedback({ status, message })
         return Promise.reject(error)
       })
     }
 
-    await execute()
-
-    feedback()
+    execute().then(() => tunnel.feedback())
   }
 
   public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>): void {
-    const action = async (socket: Socket, action: string, payload: any): Promise<any> => {
+    const action = async (socket: Socket, action: string, payload: WebSocketPayload): Promise<any> => {
       const feedback = this.feedback.bind(this, socket, action)
-      const log = this.log.bind(this)
-      return listener({ payload, feedback, socket, log })
+      return listener({ socket, payload, feedback })
     }
 
     this.events.push({ type, action })
   }
 
-  private feedback (socket: Socket, type: string, data: StandardResponse = {}): void {
-    const params: WebSocketResponseMessage = {
+  private feedback (socket: Socket, type: string, data: StandardJSONResponse = {}): void {
+    const params: WebSocketMessage = {
       action: type,
-      payload: this.standard(data)
+      payload: this.genStandardResponse(data)
     }
 
     socket.emit('deploy', params)
@@ -123,10 +117,14 @@ export default class WebSocketServer extends Service {
 
   public destroy (): void {
     super.destroy()
-    this.server.close()
 
+    this.server.close()
+    this.devTool.destroy()
+
+    this.server = undefined
     this.devTool = undefined
     this.options = undefined
-    this.server = undefined
+
+    this.destroy = Function.prototype as any
   }
 }

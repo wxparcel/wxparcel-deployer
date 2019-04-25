@@ -1,35 +1,39 @@
 import path = require('path')
-import chalk from 'chalk'
-import { IncomingForm } from 'formidable'
 import forEach = require('lodash/forEach')
-import { ServerOptions } from '../libs/OptionManager'
+import { IncomingForm } from 'formidable'
 import DevTool from '../libs/DevTool'
-import Connection from '../libs/http/Connection'
-import Server from '../libs/http/Server'
-import Service from '../libs/Service'
-import StdoutServ from '../services/stdout'
-import { ensureDirs, removeFiles, unzip, killProcess } from '../share/fns'
-import { Server as HttpServer, IncomingMessage } from 'http'
-import { CommandError, StandardResponse, HttpServerTunnel } from '../typings'
+import HttpServer from '../libs/Server'
+import BaseService from '../libs/Service'
+import Connection from '../libs/Connection'
+import OptionManager from './OptionManager'
+import Queue from '../services/queue'
+import { ensureDirs, unzip, removeFiles, killProcess } from '../share/fns'
 
-export default class HttpService extends Service {
-  private options: ServerOptions
+import { IncomingMessage } from 'http'
+import { CommandError, StandardJSONResponse, Tunnel } from '../typings'
+
+export default class Server extends BaseService {
+  private options: OptionManager
+  private server: HttpServer
   private devTool: DevTool
-  private server: Server
   private promises: { [key: string ]: Promise<any> }
   private tokens: { [key: string]: symbol }
 
-  constructor (options: ServerOptions) {
-    super()
-
-    this.promises = {}
-    this.tokens = {}
-    this.options = options
-    this.devTool = new DevTool(this.options)
-    this.server = new Server()
+  get httpServer () {
+    return this.server.server
   }
 
-  public async start (): Promise<void> {
+  constructor (options: OptionManager, devTool?: DevTool, server?: HttpServer) {
+    super()
+
+    this.options = options
+    this.devTool = devTool || new DevTool(this.options)
+    this.server = server || new HttpServer()
+    this.promises = {}
+    this.tokens = {}
+  }
+
+  public start (): Promise<void> {
     const { port } = this.options
 
     this.route('GET', '/status', this.status.bind(this))
@@ -40,80 +44,57 @@ export default class HttpService extends Service {
     return this.server.listen(port)
   }
 
-  public async status (tunnel: HttpServerTunnel): Promise<void> {
-    const { feedback } = tunnel
-    feedback({ message: 'okaya, server is running.' })
+  public async status (tunnel: Tunnel): Promise<void> {
+    tunnel.feedback({ message: 'okaya, server is running.' })
   }
 
-  public async upload (tunnel: HttpServerTunnel): Promise<void> {
-    const { conn, feedback } = tunnel
+  public async upload (tunnel: Tunnel): Promise<void> {
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
 
-    const { request } = conn
-    const requestData = await this.transfer(request)
+    const requestData = await this.extract(tunnel.request)
     const { file: uploadFile, appid, version, message } = requestData
-    const log = (message: string) => this.log(message, appid)
-    log('Upload completed.')
-
     const uploadFileName = appid || path.basename(uploadFile).replace(path.extname(uploadFile), '')
     const projFolder = path.join(deployPath, uploadFileName)
+
     const unzipPromises = await unzip(uploadFile, projFolder)
-
-    unzipPromises.length > 0 && log(`Uncompress file ${chalk.bold(path.basename(uploadFile))}, project folder is ${chalk.bold(path.basename(projFolder))}`)
-    this.idle === false && log('Wait for other command execution of the devTool')
-
-    this.pushQueue(...unzipPromises)
+    Queue.push(...unzipPromises)
 
     const command = (killToken: symbol) => {
-      log('Start to upload to weixin server')
       return this.devTool.upload(projFolder, version, message, killToken)
     }
 
     let retryTimes = 0
     const catchError = (error: CommandError) => {
       if (retryTimes ++ <= 3) {
-        log('Retry upload to weixin server')
-        return this.devTool.quit().then(() => this.execute(command).catch(catchError))
+        return this.devTool.quit().then(() => {
+          return this.execute(command).catch(catchError)
+        })
       }
 
-      let { status, message } = this.resolveCommandError(error)
-      conn.setStatus(status)
-      feedback({ message })
-
+      tunnel.feedback(error)
       return Promise.reject(error)
     }
 
     await this.execute(command).catch(catchError)
     await removeFiles(uploadFile, projFolder)
 
-    log('Upload completed')
-    feedback({ message: 'Upload completed' })
+    tunnel.feedback({ message: 'Upload completed' })
   }
 
-  public async login (tunnel: HttpServerTunnel): Promise<void> {
-    const { conn, feedback } = tunnel
-
+  public async login (tunnel: Tunnel): Promise<void> {
     const command = (killToken: symbol): Promise<any> => new Promise((resolve) => {
       const feedbackQrCode = (qrcode: Buffer) => {
-        feedback({ data: qrcode })
+        tunnel.feedback({ data: qrcode })
         resolve()
       }
 
       const catchError = (error: CommandError) => {
-        let { status, message } = this.resolveCommandError(error)
-
-        conn.setStatus(status)
-        feedback({ message })
-
+        tunnel.feedback(error)
         return Promise.reject(error)
       }
 
-      let promise = this.devTool.login(feedbackQrCode, killToken).catch(catchError)
-      this.promises.login = promise.catch((error) => {
-        StdoutServ.error(error)
-      })
-
+      this.promises.login = this.devTool.login(feedbackQrCode, killToken).catch(catchError)
       this.tokens.login = killToken
     })
 
@@ -126,89 +107,93 @@ export default class HttpService extends Service {
     await this.execute(command)
   }
 
-  public async checkin (tunnel: HttpServerTunnel): Promise<void> {
-    const { conn, feedback } = tunnel
-    const { request } = conn
+  public async checkin (tunnel: Tunnel): Promise<void> {
     const { login: promise } = this.promises
 
     if (!(promise instanceof Promise)) {
-      feedback({ status: 401, message: 'unlogined' })
+      tunnel.feedback({ status: 401, message: 'unlogined' })
       return
     }
 
-    const remove = () => delete this.promises.login
-    request.once('end', remove)
+    const remove = () => {
+      delete this.promises.login
+    }
+
+    tunnel.request.once('end', remove)
 
     const completed = () => {
-      feedback({ message: 'logined success' })
+      tunnel.feedback({ message: 'logined success' })
     }
 
     const catchError = (error: CommandError) => {
-      let { status, message } = this.resolveCommandError(error)
-
-      conn.setStatus(status)
-      feedback({ message })
-
+      tunnel.feedback(error)
       return Promise.reject(error)
     }
 
     promise.then(completed).catch(catchError)
   }
 
-  public route (methods: string | Array<string>, path: string, handle: (tunnel: HttpServerTunnel) => Promise<void>) {
-    const router = async (params: RegExpExecArray, conn: Connection) => {
-      const feedback = this.feedback.bind(this, conn)
-      const log = (message: string) => this.log(message)
+  public route (methods: string | Array<string>, path: string, handle: (tunnel: Tunnel) => Promise<void>) {
+    const router = (params: RegExpExecArray, connection: Connection) => {
+      let tunnel = connection as Tunnel
+      tunnel.params = params
+      tunnel.feedback = this.feedback.bind(this, connection)
 
-      await handle({ params, conn, feedback, log }).catch((error) => {
-        return Promise.reject(error)
-      })
+      return handle(tunnel)
     }
 
     this.server.route(methods, path, router)
   }
 
-  public getServer (): HttpServer {
-    return this.server.server
-  }
-
-  private transfer (request: IncomingMessage): Promise<any> {
+  private extract (request: IncomingMessage): Promise<{ [key: string]: any }> {
     return new Promise((resolve, reject) => {
       const { uploadPath } = this.options
       const form = new IncomingForm()
       const formData = {}
 
-      form.uploadDir = uploadPath
-
-      form.parse(request, (error, fields, _files) => {
+      const handleParse = (error, fields, files) => {
         if (error) {
           reject(error)
           return
         }
 
-        let files = {}
-        forEach(_files, (file, name) => {
-          files[name] = file.path
-        })
+        let resultFiles = {}
+        forEach(files, (file, name) => resultFiles[name] = file.path)
+        Object.assign(formData, fields, resultFiles)
+      }
 
-        Object.assign(formData, fields, files)
-      })
-
+      form.uploadDir = uploadPath
+      form.parse(request, handleParse)
       form.on('end', () => resolve(formData))
     })
   }
 
-  private feedback (conn: Connection, content: StandardResponse) {
-    let response = this.standard({ status: conn.status, ...content })
-    conn.writeJson(response)
+  private feedback (connection: Connection, content: StandardJSONResponse | CommandError) {
+    function isCommandError (content: StandardJSONResponse | CommandError): content is CommandError {
+      return 'code' in content
+    }
+
+    if (isCommandError(content)) {
+      let { status, message } = this.resolveCommandError(content)
+      let data = this.genStandardResponse({ status, message })
+      connection.endJson(data)
+    } else {
+      let status = connection.status
+      let data = this.genStandardResponse({ status, ...content })
+      connection.endJson(data)
+    }
   }
 
   public destroy (): void {
     super.destroy()
 
     this.server.close()
+    this.devTool.destroy()
 
+    this.server = undefined
     this.devTool = undefined
     this.options = undefined
+
+    this.destroy = Function.prototype as any
   }
 }

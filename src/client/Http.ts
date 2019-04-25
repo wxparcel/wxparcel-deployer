@@ -7,12 +7,12 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } f
 import FormData = require('form-data')
 import terminalImage = require('terminal-image')
 import { ClientOptions } from '../libs/OptionManager'
-import Client from '../libs/Client'
+import BaseClient from '../libs/Client'
 import stdoutServ from '../services/stdout'
 import { unitSize } from '../share/fns'
 import { CommandError } from '../typings'
 
-export default class HttpClient extends Client {
+export default class Client extends BaseClient {
   private options: ClientOptions
   private request: AxiosInstance
 

@@ -1,5 +1,4 @@
-import HttpConnection from './libs/http/Connection'
-import SocketConnection from './libs/socket/Connection'
+import { IncomingMessage, ServerResponse } from 'http'
 import { Socket as WebSocket } from 'socket.io'
 import { Socket as WebSocketClient } from 'socket.io-client'
 
@@ -10,84 +9,91 @@ export interface ChildProcessMap {
   kill: () => void
 }
 
+import Connection from './libs/Connection'
+
+export interface BaseOptions {
+  uid?: string
+  tempPath?: string
+  maxFileSize?: number
+  logMethod?: string | Array<string>
+  isDevelop?: boolean
+}
+
+export enum LoggerMethods {
+  CONSOLE = 'CONSOLE',
+  FILE = 'FILE'
+}
+
+export enum LoggerTypes {
+  LOG = 'LOG',
+  OK = 'OK',
+  INFO = 'INFO',
+  WARN = 'WARN',
+  ERROR = 'ERROR',
+  CLEAR = 'CLEAR'
+}
+
+export interface LoggerOptions {
+  method?: string | Array<string>
+  logFile?: string
+}
+
+export type LoggerFormat = (content: string) => string
+export type LoggerHeads = Array<string | { content: string, format?: LoggerFormat }>
+export type LoggerMessages = Array<string | { content: string | Error, format?: LoggerFormat }>
+
+export interface ServerCLIOptions {
+  config?: string
+  port?: number
+  devToolCli?: string
+  devToolServ?: string
+}
+
 export interface CommandError extends Error {
   code?: number
 }
 
-// server
-// -----------------
+export type Router = (request: IncomingMessage, response: ServerResponse) => Promise<any>
+export type RouterHandle = (params: any, connection: Connection) => Promise<any>
 
-export interface StandardResponse {
+export interface StandardJSONResponse {
   status?: number
   code?: number
   data?: any
   message?: string
 }
 
-export type Feedback = (content?: StandardResponse) => void
-
-export type HTTPServerRoute = (connection: HttpConnection) => Promise<any>
-export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
-
-export interface ServerTunnel {
-  feedback: Feedback
-  log: (message: string) => void
+export interface Tunnel extends Connection {
+  params: RegExpExecArray,
+  feedback: (content?: StandardJSONResponse) => void
 }
 
-export interface HttpServerTunnel extends ServerTunnel {
-  params: any
-  conn: HttpConnection
-}
-
-export interface SocketServerTunnel extends ServerTunnel {
-  socket: SocketConnection
-}
-
-export interface WebSocketTunnel extends ServerTunnel {
-  payload: any
-  socket: WebSocket | typeof WebSocketClient
-}
-
-// websocket server
-// -----------------
-
-export interface WebSocketRequestMessage {
+export interface WebSocketMessage {
   action: string
   payload: any
 }
 
-export interface WebSocketResponseMessage {
-  action: string
-  payload: StandardResponse
+export interface WebSocketPayload {
+  [key: string]: any
 }
 
 export interface WebSocketEevent {
   type: string
-  action: (socket: WebSocket | typeof WebSocketClient, action: string, payload: any) => Promise<any>
+  action: (socket: WebSocket | typeof WebSocketClient, action: string, payload: WebSocketPayload) => Promise<any>
+}
+
+export interface WebSocketTunnel {
+  payload: WebSocketPayload
+  socket: WebSocket | typeof WebSocketClient
+  feedback: (content?: StandardJSONResponse) => void
 }
 
 // logger
 // -----------------
 
-export enum LogTypes {
-  console
-}
-
-export interface LoggerOptions {
-  type?: keyof typeof LogTypes
-  detailed?: boolean
-}
-
 // Options
 // --------------
 
-export interface BaseOptions {
-  uid?: string
-  tempPath?: string
-  maxFileSize?: number
-  logType?: keyof typeof LogTypes
-  isDevelop?: boolean
-}
 export interface ServerBaseOptions extends BaseOptions {
   uploadPath?: string
   deployPath?: string

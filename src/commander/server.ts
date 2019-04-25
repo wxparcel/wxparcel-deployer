@@ -3,18 +3,17 @@ import ip = require('ip')
 import program = require('commander')
 import portscanner = require('portscanner')
 import chalk from 'chalk'
-import { ServerOptions } from '../libs/OptionManager'
 import Logger from '../libs/Logger'
 import stdoutServ from '../services/stdout'
-import HttpServ from '../server/Http'
-import SocketServ from '../server/Socket'
-import WebSocketServ from '../server/WebSocket'
-import DistributorServ from '../server/Distributor'
+import OptionManager from '../server/OptionManager'
+import Server from '../server'
 import * as pkg from '../../package.json'
+
 import { ServerCLIOptions } from '../typings'
 
 export const server = async (options: ServerCLIOptions = {}) => {
   let { config: configFile, port } = options
+
   if (!port) {
     port = await portscanner.findAPortNotInUse(3000, 8000, ip.address()).catch((error) => {
       stdoutServ.error(error)
@@ -34,7 +33,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
     defaultOptions = defaultOptions.default || defaultOptions
   }
 
-  const globalOptions = new ServerOptions({
+  const globalOptions = new OptionManager({
     ...defaultOptions,
     devToolCli: options.devToolCli,
     devToolServer: options.devToolServ,
@@ -45,26 +44,11 @@ export const server = async (options: ServerCLIOptions = {}) => {
     throw new Error('Please set devtool cli or devtool server url')
   }
 
-  const logger = new Logger({ type: globalOptions.logType })
+  const method = globalOptions.logMethod
+  const logger = new Logger({ method })
   logger.listen(stdoutServ)
 
-  const server = (() => {
-    if (options.hasOwnProperty('socket')) {
-      let server = new SocketServ(globalOptions)
-      return server
-    }
-
-    if (options.hasOwnProperty('distributor')) {
-      let server = new DistributorServ(globalOptions)
-      return server
-    }
-
-    let server = new HttpServ(globalOptions)
-    let webSocket = new WebSocketServ(globalOptions)
-    webSocket.start(server.getServer())
-    return server
-  })()
-
+  const server = new Server(globalOptions)
   await server.start().catch((error) => {
     stdoutServ.error(error)
     process.exit(3)
@@ -73,12 +57,14 @@ export const server = async (options: ServerCLIOptions = {}) => {
   })
 
   stdoutServ.clear()
-  stdoutServ.log(chalk.gray.bold('WXParcel Server'))
-  stdoutServ.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
-  stdoutServ.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
-  globalOptions.devToolCli && stdoutServ.log(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
-  globalOptions.devToolServer && stdoutServ.log(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
-  stdoutServ.log(chalk.magenta('Deploy server is running, please make sure wx devtool has been logined.'))
+  const log = (message) => console.log(message)
+
+  log(chalk.gray.bold('WXParcel Server'))
+  log(`Version: ${chalk.cyan.bold(pkg.version)}`)
+  log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
+  globalOptions.devToolCli && log(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
+  globalOptions.devToolServer && log(`DevTool Server: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
+  log(chalk.magenta('Deploy server is running, please make sure wx devtool has been logined.'))
 
   let handleProcessSigint = process.exit.bind(process)
   let handleProcessExit = () => {
