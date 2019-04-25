@@ -1,36 +1,12 @@
 import fs = require('fs-extra')
 import path = require('path')
 import program = require('commander')
-// import chalk from 'chalk'
-import Logger from '../libs/Logger'
-import { ClientOptions } from '../libs/OptionManager'
+import chalk from 'chalk'
+import ClientOptions from '../client/OptionManager'
 import HttpClient from '../client/Http'
-// import stdoutServ from '../services/stdout'
+import StdoutServ from '../services/stdout'
+import { wrapClientAction } from '../share/command'
 import { ClientCLIOptions } from '../typings'
-
-const action = (action) => (options) => {
-  let { config: configFile } = options
-  let defaultOptions: any = {}
-
-  if (configFile) {
-    if (!fs.existsSync(configFile)) {
-      throw new Error(`Config file is not found, please ensure config file exists. ${configFile}`)
-    }
-
-    defaultOptions = require(configFile)
-    defaultOptions = defaultOptions.default || defaultOptions
-  }
-
-  let globalOptions = new ClientOptions({
-    ...defaultOptions,
-    server: options.server
-  })
-
-  let logger = new Logger({ method: globalOptions.logMethod })
-  // logger.listen(stdoutServ)
-
-  return action(options, globalOptions)
-}
 
 const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions) => {
   let { version, message } = options
@@ -50,16 +26,16 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
   const folder = options.folder || globalOptions.rootPath
   const client = new HttpClient(globalOptions)
 
-  // stdoutServ.clear()
-  // stdoutServ.info(`Start uploading ${chalk.bold(folder)}`)
+  StdoutServ.clear()
+  StdoutServ.log(`start uploading ${chalk.bold(folder)}`)
 
   const uploadPath = options.hasOwnProperty('distributor') ? '/collector' : '/upload'
-  await client.upload(folder, version, message, uploadPath).catch((_) => {
-    // stdoutServ.error(error)
+  await client.upload(folder, version, message, uploadPath).catch((error) => {
+    StdoutServ.error(error)
     process.exit(3)
   })
 
-  // stdoutServ.ok(`Project ${chalk.bold(folder)} upload completed`)
+  StdoutServ.ok(`project ${chalk.bold(folder)} deploy completed`)
 }
 
 program
@@ -70,6 +46,4 @@ program
 .option('-d, --message <message>', 'setting upload message')
 .option('-c, --config <config>', 'settting config file')
 .option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
-.option('--socket', 'setting socket mode')
-.option('--distributor', 'setting distributor mode')
-.action(action(upload))
+.action(wrapClientAction(upload))

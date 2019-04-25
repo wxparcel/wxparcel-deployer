@@ -6,7 +6,7 @@ import forEach = require('lodash/forEach')
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import FormData = require('form-data')
 import terminalImage = require('terminal-image')
-import { ClientOptions } from '../libs/OptionManager'
+import ClientOptions from './OptionManager'
 import BaseClient from '../libs/Client'
 import stdoutServ from '../services/stdout'
 import { unitSize } from '../share/fns'
@@ -51,43 +51,36 @@ export default class Client extends BaseClient {
   }
 
   public async upload (folder: string, version: string, message: string, url: string = '/upload'): Promise<any> {
-    let repoUrl = await this.getGitRepo(folder)
-    let getLog = await this.getGitMessage(folder)
-    let [gitUser, gitEmail, gitDatetime, gitHash, gitMessage] = getLog.split('\n')
-
-    gitUser = gitUser || ''
-    gitEmail = gitEmail || ''
-    gitDatetime = gitDatetime || new Date() + ''
-    gitHash = gitHash || ''
-    gitMessage = gitMessage || ''
-    message = message || gitMessage
-
     const { releasePath } = this.options
+    const repoUrl = await this.getGitRepo(folder)
+    const getLog = await this.getGitMessage(folder)
+    const [gitUser, gitEmail, gitDatetime, gitHash, gitMessage] = getLog.split('\n')
     const { appid, compileType, libVersion, projectname } = await this.getProjectConfig(folder)
     const zipFile = path.join(releasePath, `${Date.now()}.zip`)
 
     await this.compress(folder, zipFile)
 
-    let datas = {
+    const datas = {
       repoUrl,
-      gitUser,
-      gitEmail,
-      gitMessage,
-      gitHash,
-      gitDatetime,
+      gitUser: gitUser || '',
+      gitEmail: gitEmail || '',
+      gitMessage: gitMessage || '',
+      gitHash: gitHash || '',
+      gitDatetime: gitDatetime || new Date() + '',
       appid,
       version,
-      message,
+      message: message || gitMessage,
       compileType,
       libVersion,
       projectname: decodeURIComponent(projectname)
     }
 
-    const response = await this.uploadFile(url, zipFile, datas).catch((error: CommandError) => {
+    const catchError = (error: CommandError) => {
       fs.removeSync(zipFile)
       return Promise.reject(error)
-    })
+    }
 
+    const response = await this.uploadFile(url, zipFile, datas).catch(catchError)
     fs.removeSync(zipFile)
     return response
   }

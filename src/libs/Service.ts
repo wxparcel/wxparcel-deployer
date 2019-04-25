@@ -51,12 +51,6 @@ export default class Service {
     return Promise.all(Queue.promise).then(execute)
   }
 
-  // public log (message: string, ...args: Array<string>): void {
-  //   const prefix = args.map((value) => `[${chalk.green.bold(value)}]`)
-  //   const datetime = chalk.gray(new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''))
-  //   stdoutServ.info(`${prefix.length ? prefix.join(' ') + ' ' : ''}${message && message + ' '}${datetime}`)
-  // }
-
   public genStandardResponse (content: StandardJSONResponse): StandardJSONResponse {
     let response = this.genDefaultResponse(content.status)
     let keys = Object.keys(response)
@@ -94,13 +88,13 @@ export default class Service {
     switch (error.code) {
       case 255: {
         let status = 520
-        let message = 'Operation fail, please retry'
+        let message = 'command fail, please retry'
         return { status, message }
       }
 
       case -408: {
         let status = 408
-        let message = 'Operation timeout, please retry'
+        let message = 'command timeout, please retry'
         return { status, message }
       }
 

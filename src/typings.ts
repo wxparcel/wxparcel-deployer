@@ -14,12 +14,39 @@ export interface StdoutOptions {
   autoDatetime?: boolean
 }
 
+export interface ClientCLIOptions {
+  config?: string
+  version?: string
+  message?: string
+  folder?: string
+  server?: string
+}
+
+export interface ServerCLIOptions {
+  config?: string
+  port?: number
+  devToolCli?: string
+}
+
 export interface BaseOptions {
   uid?: string
   tempPath?: string
   maxFileSize?: number
   logMethod?: string | Array<string>
   isDevelop?: boolean
+}
+
+export interface ClientBaseOptions extends BaseOptions {
+  releasePath?: string
+  server?: string
+}
+
+export interface ServerBaseOptions extends BaseOptions {
+  uploadPath?: string
+  deployPath?: string
+  qrcodePath?: string
+  devToolCli?: string
+  port?: number
 }
 
 export enum LoggerMethods {
@@ -44,20 +71,6 @@ export interface LoggerOptions {
 export type LoggerFormat = (content: string) => string
 export type LoggerHeads = Array<string | { content: string, format?: LoggerFormat }>
 export type LoggerMessages = Array<string | { content: string | Error, format?: LoggerFormat }>
-
-export interface ServerCLIOptions {
-  config?: string
-  port?: number
-  devToolCli?: string
-}
-
-export interface ServerBaseOptions extends BaseOptions {
-  uploadPath?: string
-  deployPath?: string
-  qrcodePath?: string
-  devToolCli?: string
-  port?: number
-}
 
 export interface CommandError extends Error {
   code?: number
@@ -100,20 +113,6 @@ export interface WebSocketTunnel {
 
 // Options
 // --------------
-
-export interface ClientBaseOptions extends BaseOptions {
-  releasePath?: string
-  server?: string
-}
-
-export interface ClientCLIOptions {
-  config?: string
-  version?: string
-  message?: string
-  folder?: string
-  server?: string
-  socket?: any
-}
 
 export type DevToolQRCodeHandle = (qrcode: string | Buffer) => void
 

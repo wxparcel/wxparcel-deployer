@@ -4,7 +4,7 @@ import program = require('commander')
 import portscanner = require('portscanner')
 import chalk from 'chalk'
 import Logger from '../libs/Logger'
-import stdoutServ from '../services/stdout'
+import StdoutServ from '../services/stdout'
 import OptionManager from '../server/OptionManager'
 import Server from '../server'
 import * as pkg from '../../package.json'
@@ -16,7 +16,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
 
   if (!port) {
     port = await portscanner.findAPortNotInUse(3000, 8000, ip.address()).catch((error) => {
-      stdoutServ.error(error)
+      StdoutServ.error(error)
       process.exit(3)
 
       return Promise.reject(error)
@@ -45,11 +45,11 @@ export const server = async (options: ServerCLIOptions = {}) => {
 
   const method = globalOptions.logMethod
   const logger = new Logger({ method })
-  logger.listen(stdoutServ)
+  logger.listen(StdoutServ)
 
   const server = new Server(globalOptions)
   await server.start().catch((error) => {
-    stdoutServ.error(error)
+    StdoutServ.error(error)
     process.exit(3)
 
     return Promise.reject(error)
@@ -57,7 +57,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
 
   const log = (message) => console.log(message)
 
-  stdoutServ.clear()
+  StdoutServ.clear()
   log(chalk.gray.bold('WXParcel Server'))
   log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)

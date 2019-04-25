@@ -1,5 +1,4 @@
 import path = require('path')
-import trimEnd = require('lodash/trimEnd')
 import fs = require('fs-extra')
 import BaseOptionManager from '../libs/OptionManager'
 

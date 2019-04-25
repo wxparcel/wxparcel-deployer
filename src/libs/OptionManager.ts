@@ -2,7 +2,7 @@ import os = require('os')
 import path = require('path')
 import shortid = require('shortid')
 import ip = require('ip')
-import { LoggerMethods, BaseOptions, ClientBaseOptions } from '../typings'
+import { LoggerMethods, BaseOptions } from '../typings'
 
 export default class OptionManager {
   public uid: string
@@ -36,22 +36,6 @@ export default class OptionManager {
 
     if (options.hasOwnProperty('isDevelop')) {
       this.isDevelop = options.isDevelop
-    }
-  }
-}
-
-export class ClientOptions extends OptionManager {
-  public releasePath: string
-  public deployServer: string
-
-  constructor (options: ClientBaseOptions) {
-    super(options)
-
-    this.releasePath = options.releasePath && path.isAbsolute(options.releasePath) ? options.releasePath : path.join(this.tempPath, options.releasePath || 'release')
-    this.deployServer = options.server || `http://${this.ip}:3000`
-
-    if (!/https?:\/\//.test(this.deployServer)) {
-      throw new Error(`Deploy server error, ${this.deployServer}`)
     }
   }
 }
