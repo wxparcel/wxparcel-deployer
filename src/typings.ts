@@ -49,7 +49,14 @@ export interface ServerCLIOptions {
   config?: string
   port?: number
   devToolCli?: string
-  devToolServ?: string
+}
+
+export interface ServerBaseOptions extends BaseOptions {
+  uploadPath?: string
+  deployPath?: string
+  qrcodePath?: string
+  devToolCli?: string
+  port?: number
 }
 
 export interface CommandError extends Error {
@@ -91,30 +98,14 @@ export interface WebSocketTunnel {
   feedback: (content?: StandardJSONResponse) => void
 }
 
-// logger
-// -----------------
-
 // Options
 // --------------
 
-export interface ServerBaseOptions extends BaseOptions {
-  uploadPath?: string
-  deployPath?: string
-  qrcodePath?: string
-  devToolCli?: string
-  devToolServer?: string
-  port?: number
-}
 export interface ClientBaseOptions extends BaseOptions {
   releasePath?: string
   server?: string
 }
-export interface ServerCLIOptions {
-  config?: string
-  port?: number
-  devToolCli?: string
-  devToolServ?: string
-}
+
 export interface ClientCLIOptions {
   config?: string
   version?: string

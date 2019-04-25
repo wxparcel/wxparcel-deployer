@@ -8,7 +8,7 @@ import BaseService from '../libs/Service'
 import Connection from '../libs/Connection'
 import OptionManager from './OptionManager'
 import Queue from '../services/queue'
-import StdoutSrv, { Stdout } from '../services/stdout'
+import StdoutSrv from '../services/stdout'
 import { ensureDirs, unzip, removeFiles, killProcess } from '../share/fns'
 
 import { IncomingMessage } from 'http'
@@ -53,46 +53,40 @@ export default class Server extends BaseService {
   public async upload (tunnel: Tunnel): Promise<void> {
     const stdout = StdoutSrv.born('UPLOAD')
 
+    if (Queue.idle === false) {
+      stdout.log('wait for other commands')
+      await Queue.waitForIdle()
+    }
+
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
 
     const requestData = await this.extract(tunnel.request)
-    stdout.ok('Upload to server completed')
+    stdout.ok('upload to server completed')
 
     const { file: uploadFile, appid, version, message } = requestData
-    const uploadFileName = appid || path.basename(uploadFile).replace(path.extname(uploadFile), '')
-    const projFolder = path.join(deployPath, uploadFileName)
+    const projFolder = path.join(deployPath, appid)
 
-    const unzipPromises = await unzip(uploadFile, projFolder)
-    Queue.push(...unzipPromises)
-
-    unzipPromises.length > 0 && stdout.log(`Uncompress file ${chalk.bold(path.basename(uploadFile))}, project folder is ${chalk.bold(path.basename(projFolder))}`)
-    this.idle === false && stdout.log('Wait for other command execution of the devTool')
+    stdout.log(`unzip file ${chalk.bold(path.basename(uploadFile))} to ${chalk.bold(path.basename(projFolder))}`)
+    await Promise.all(await unzip(uploadFile, projFolder))
 
     const command = (killToken: symbol) => {
-      stdout.log('Start to upload to weixin server')
+      stdout.log('start deploy to wechat server')
       return this.devTool.upload(projFolder, version, message, killToken)
     }
 
-    let retryTimes = 0
     const catchError = (error: CommandError) => {
-      if (retryTimes ++ <= 3) {
-        stdout.warn('Retry upload to weixin server')
-
-        return this.devTool.quit().then(() => {
-          return this.execute(command).catch(catchError)
-        })
-      }
-
-      tunnel.feedback(error)
-      return Promise.reject(error)
+      return removeFiles(uploadFile, projFolder).then(() => {
+        tunnel.feedback(error)
+        return Promise.reject(error)
+      })
     }
 
     await this.execute(command).catch(catchError)
     await removeFiles(uploadFile, projFolder)
 
-    stdout.ok('Upload to wechat server completed')
-    tunnel.feedback({ message: 'Upload completed' })
+    stdout.ok('deploy completed')
+    tunnel.feedback({ message: 'deploy completed' })
   }
 
   public async login (tunnel: Tunnel): Promise<void> {

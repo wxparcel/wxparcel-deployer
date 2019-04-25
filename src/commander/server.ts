@@ -36,12 +36,11 @@ export const server = async (options: ServerCLIOptions = {}) => {
   const globalOptions = new OptionManager({
     ...defaultOptions,
     devToolCli: options.devToolCli,
-    devToolServer: options.devToolServ,
     port: port
   })
 
-  if (!(globalOptions.devToolCli || globalOptions.devToolServer)) {
-    throw new Error('Please set devtool cli or devtool server url')
+  if (!(globalOptions.devToolCli)) {
+    throw new Error('please set devtool cli')
   }
 
   const method = globalOptions.logMethod
@@ -87,7 +86,4 @@ program
 .option('-c, --config <config>', 'settting config file')
 .option('-p, --port <port>', 'setting server port, default use idle port')
 .option('--dev-tool-cli <devToolCli>', 'setting devtool cli file path')
-.option('--dev-tool-serv <devToolServ>', 'setting devtool server url')
-.option('--socket', 'setting socket mode')
-.option('--distributor', 'setting distributor mode')
 .action(server)

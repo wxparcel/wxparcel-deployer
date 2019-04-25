@@ -10,7 +10,6 @@ export default class OptionManager extends BaseOptionManager {
   public deployPath: string
   public qrcodePath: string
   public devToolCli: string
-  public devToolServer: string
   public port: number
 
   constructor (options: ServerBaseOptions) {
@@ -29,10 +28,6 @@ export default class OptionManager extends BaseOptionManager {
 
     if (options.hasOwnProperty('port')) {
       this.port = options.port
-    }
-
-    if (options.hasOwnProperty('devToolServer')) {
-      this.devToolServer = trimEnd(options.devToolServer, '/')
     }
 
     if (options.hasOwnProperty('devToolCli') && fs.existsSync(options.devToolCli)) {

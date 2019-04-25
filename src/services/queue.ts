@@ -5,6 +5,10 @@ export class Queue {
     return this.queue.length
   }
 
+  get idle () {
+    return this.size === 0
+  }
+
   get promise () {
     return [].concat(this.queue)
   }
@@ -31,6 +35,15 @@ export class Queue {
   public remove (promise: Promise<void>) {
     let index = this.queue.indexOf(promise)
     index !== -1 && this.queue.splice(index, 1)
+  }
+
+  public waitForIdle () {
+    const resolve = () => Promise.resolve()
+    if (this.promise.length === 0) {
+      return resolve()
+    }
+
+    return Promise.all(this.promise).then(resolve).catch(resolve)
   }
 }
 

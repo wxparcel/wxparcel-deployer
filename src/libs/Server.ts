@@ -96,8 +96,6 @@ export default class Server {
     const handleError = (error) => {
       connection.end({ status: 500, message: error.message })
       connection.destroy()
-
-      return Promise.reject(error)
     }
 
     let exec = this.waterfall(this.routes)
