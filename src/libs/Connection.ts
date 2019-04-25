@@ -6,6 +6,7 @@ export default class Connection {
   public response: ServerResponse
   public head: { [key: string]: string }
   public status: number
+  public ended: boolean
 
   constructor (request: IncomingMessage, response: ServerResponse) {
     this.request = request
@@ -13,6 +14,7 @@ export default class Connection {
 
     this.head = {}
     this.status = 200
+    this.ended = false
   }
 
   public setCros (): void {
@@ -34,26 +36,24 @@ export default class Connection {
     this.status = status
   }
 
-  public endJson (response: StandardJSONResponse = {}): void {
-    let status = response.status || this.status || 200
-    let message = JSON.stringify({ status, ...response })
-
-    this.writeHead('Content-Type', 'application/json;charset=utf-8')
-    this.writeHead('Content-Length', message.length + '')
-
-    this.response.writeHead(response.status || this.status, this.head)
-    this.response.end(message)
-  }
-
   public end (response: StandardJSONResponse = {}): void {
+    if (this.ended === true) {
+      return
+    }
+
+    let contentType = this.request.headers['content-type'] || ''
+    let isJson = -1 !== contentType.search('application/json')
+
     let status = response.status || this.status || 200
-    let message = response.message || ''
+    let message = isJson ? JSON.stringify({ status, ...response }) : response.message || ''
 
     this.writeHead('Content-Type', 'text/plain;charset=utf-8')
     this.writeHead('Content-Length', message.length + '')
 
     this.response.writeHead(status, this.head)
     this.response.end(message)
+
+    this.ended = true
   }
 
   public destroy () {

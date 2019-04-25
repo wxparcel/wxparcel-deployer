@@ -20,7 +20,7 @@ export default class Server extends BaseService {
   private tokens: { [key: string]: symbol }
 
   get httpServer () {
-    return this.server.server
+    return this.server.httpServer
   }
 
   constructor (options: OptionManager, devTool?: DevTool, server?: HttpServer) {
@@ -176,11 +176,11 @@ export default class Server extends BaseService {
     if (isCommandError(content)) {
       let { status, message } = this.resolveCommandError(content)
       let data = this.genStandardResponse({ status, message })
-      connection.endJson(data)
+      connection.end(data)
     } else {
       let status = connection.status
       let data = this.genStandardResponse({ status, ...content })
-      connection.endJson(data)
+      connection.end(data)
     }
   }
 

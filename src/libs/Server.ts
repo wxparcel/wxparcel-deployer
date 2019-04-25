@@ -2,45 +2,24 @@ import http = require('http')
 import pathToRegexp = require('path-to-regexp')
 import chalk from 'chalk'
 import Connection from './Connection'
-import StdoutServ from '../services/stdout'
+import StdoutServ, { Stdout } from '../services/stdout'
 
 import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http'
 import { Router, RouterHandle } from '../typings'
 
 export default class Server {
+  private stdout: Stdout
   private routes: Array<Router>
-  public server: HttpServer
+  private server: HttpServer
+
+  get httpServer (): HttpServer {
+    return this.server
+  }
 
   constructor () {
     this.routes = []
     this.server = http.createServer(this.connect.bind(this))
-  }
-
-  private connect (request: IncomingMessage, response: ServerResponse): Promise<void> {
-    if (request.url === '/favicon.ico') {
-      response.end()
-      return Promise.resolve()
-    }
-
-    const logger = () => {
-      const url = request.url
-      const method = request.method.toUpperCase()
-      const format = chalk.cyanBright.bind(chalk)
-      return StdoutServ.dateime().head(method, format).head(response.statusCode + '', format).write(url)
-    }
-
-    const handleSuccess = () => {
-      logger().ok()
-      response.finished || response.end()
-    }
-
-    const handleError = (error) => {
-      logger().error(error)
-      return Promise.reject(error)
-    }
-
-    let exec = this.waterfall(this.routes)
-    return exec(request, response).then(handleSuccess).catch(handleError)
+    this.stdout = StdoutServ.born()
   }
 
   public listen (port: number, hostname?: string, backlog?: number): Promise<void> {
@@ -58,7 +37,8 @@ export default class Server {
     methods = methods || 'GET'
     methods = Array.isArray(methods) ? methods : [methods]
 
-    const router: Router = (request, response): Promise<Boolean> => {
+    const router: Router = (connection: Connection): Promise<Boolean> => {
+      const { request } = connection
       const url = request.url
       const regexp = pathToRegexp(route)
       const params = regexp.exec(url)
@@ -67,19 +47,23 @@ export default class Server {
         return Promise.resolve(false)
       }
 
+      const format = chalk.greenBright.bind(chalk)
+      this.stdout.head('HIT', format).write(url).write(route)
+
       const handleSuccess = () => {
-        StdoutServ.dateime().head('HIT', chalk.greenBright.bind(chalk)).write(url).write(route).ok()
-        connection.destroy()
+        this.stdout.ok()
+
+        connection.end()
         return true
       }
 
       const handleError = (error) => {
-        StdoutServ.dateime().head('HIT', chalk.greenBright.bind(chalk)).error(error)
-        connection.destroy()
-        return error
+        this.stdout.error(error)
+
+        connection.end({ status: 500, message: error.message })
+        return Promise.reject(error)
       }
 
-      const connection = new Connection(request, response)
       connection.setMethods(methods as Array<string>)
       connection.setCros()
 
@@ -87,6 +71,40 @@ export default class Server {
     }
 
     this.routes.push(router)
+  }
+
+  private connect (request: IncomingMessage, response: ServerResponse): Promise<void> {
+    if (request.url === '/favicon.ico') {
+      response.end()
+      return Promise.resolve()
+    }
+
+    const handleSuccess = (hit: boolean) => {
+      if (hit === false) {
+        connection.setStatus(404)
+        connection.end({ message: 'service is not found' })
+
+      } else {
+        connection.end({ message: 'ok' })
+      }
+
+      const method = request.method.toUpperCase()
+      const format = chalk.cyanBright.bind(chalk)
+      this.stdout.head(method, format).write(connection.status + '').info(request.url)
+
+      connection.destroy()
+    }
+
+    const handleError = (error) => {
+      connection.end({ status: 500, message: error.message })
+      connection.destroy()
+
+      return Promise.reject(error)
+    }
+
+    let exec = this.waterfall(this.routes)
+    let connection = new Connection(request, response)
+    return exec(connection).then(handleSuccess).catch(handleError)
   }
 
   public close (): void {
@@ -100,18 +118,18 @@ export default class Server {
   private waterfall (middlewares: Array<(...args) => Promise<any>>) {
     middlewares = [].concat(middlewares)
 
-    return function waterfall (request: IncomingMessage, response: ServerResponse): Promise<boolean> {
+    return function waterfall (connection: Connection): Promise<boolean> {
       if (middlewares.length === 0) {
         return Promise.resolve(false)
       }
 
       let middleware = middlewares.shift()
-      return middleware(request, response).then((isBreak: boolean) => {
+      return middleware(connection).then((isBreak: boolean) => {
         if (isBreak === true) {
           return Promise.resolve(true)
         }
 
-        return waterfall(request, response)
+        return waterfall(connection)
       })
     }
   }
@@ -119,8 +137,10 @@ export default class Server {
   public destroy () {
     this.routes.splice(0)
     this.server.close()
+    this.stdout.destory()
 
     this.routes = undefined
     this.server = undefined
+    this.stdout = undefined
   }
 }

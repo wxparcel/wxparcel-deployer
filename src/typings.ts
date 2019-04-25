@@ -1,4 +1,3 @@
-import { IncomingMessage, ServerResponse } from 'http'
 import { Socket as WebSocket } from 'socket.io'
 import { Socket as WebSocketClient } from 'socket.io-client'
 
@@ -10,6 +9,10 @@ export interface ChildProcessMap {
 }
 
 import Connection from './libs/Connection'
+
+export interface StdoutOptions {
+  autoDatetime?: boolean
+}
 
 export interface BaseOptions {
   uid?: string
@@ -53,7 +56,7 @@ export interface CommandError extends Error {
   code?: number
 }
 
-export type Router = (request: IncomingMessage, response: ServerResponse) => Promise<any>
+export type Router = (connection: Connection) => Promise<any>
 export type RouterHandle = (params: any, connection: Connection) => Promise<any>
 
 export interface StandardJSONResponse {

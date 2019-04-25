@@ -1,17 +1,49 @@
 import { EventEmitter } from 'events'
 import chalk from 'chalk'
-import { LoggerTypes, LoggerFormat, LoggerHeads, LoggerMessages } from '../typings'
+import {
+  StdoutOptions,
+  LoggerTypes, LoggerFormat, LoggerHeads, LoggerMessages
+} from '../typings'
 
 export class Stdout extends EventEmitter {
+  static TYPES: Array<LoggerTypes> = [
+    LoggerTypes.LOG,
+    LoggerTypes.OK,
+    LoggerTypes.INFO,
+    LoggerTypes.WARN,
+    LoggerTypes.ERROR,
+    LoggerTypes.CLEAR
+  ]
+
   private heads: LoggerHeads
   private messages: LoggerMessages
-  private hasDatetime: boolean
+  private _hasDatetime: boolean
+  private autoDatetime: boolean
 
-  constructor () {
+  private get hasDatetime () {
+    if (this.autoDatetime === true) {
+      return true
+    }
+
+    return this._hasDatetime
+  }
+
+  private set hasDatetime (value) {
+    this._hasDatetime = this.autoDatetime === true ? true : !!value
+  }
+
+  constructor (options: StdoutOptions = {}) {
     super()
 
     this.heads = []
     this.messages = []
+    this.autoDatetime = options.hasOwnProperty('autoDatetime') ? options.autoDatetime : true
+  }
+
+  public born (): Stdout {
+    const service = new Stdout()
+    Stdout.TYPES.forEach((event) => service.on(event, (data) => this.emit(event, data)))
+    return service
   }
 
   public head (content: string, format?: LoggerFormat): this {
@@ -19,8 +51,8 @@ export class Stdout extends EventEmitter {
     return this
   }
 
-  public dateime (format: LoggerFormat = chalk.gray.bind(chalk)): this {
-    if (this.hasDatetime === true) {
+  public dateime (format: LoggerFormat = chalk.gray.bind(chalk), force: boolean = false): this {
+    if (this.hasDatetime === true && force !== true) {
       return this
     }
 
@@ -38,33 +70,28 @@ export class Stdout extends EventEmitter {
   }
 
   public log (message?: string | Error, format?: LoggerFormat): void {
-    this.type(LoggerTypes.LOG, chalk.whiteBright.bind(chalk))
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.LOG)
+    this.send(LoggerTypes.LOG, chalk.whiteBright.bind(chalk))
   }
 
   public ok (message?: string | Error, format?: LoggerFormat): void {
-    this.type(LoggerTypes.OK, chalk.greenBright.bind(chalk))
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.OK)
+    this.send(LoggerTypes.OK, chalk.greenBright.bind(chalk))
   }
 
   public info (message?: string | Error, format?: LoggerFormat): void {
-    this.type(LoggerTypes.INFO, chalk.cyanBright.bind(chalk))
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.INFO)
+    this.send(LoggerTypes.INFO, chalk.cyanBright.bind(chalk))
   }
 
   public warn (message?: string | Error, format?: LoggerFormat): void {
-    this.type(LoggerTypes.WARN, chalk.yellowBright.bind(chalk))
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.WARN)
+    this.send(LoggerTypes.WARN, chalk.yellowBright.bind(chalk))
   }
 
   public error (message?: string | Error, format?: LoggerFormat): void {
-    this.type(LoggerTypes.ERROR, chalk.redBright.bind(chalk))
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.ERROR)
+    this.send(LoggerTypes.ERROR, chalk.redBright.bind(chalk))
   }
 
   public write (content: string | Error, format?: LoggerFormat): this {
@@ -72,13 +99,18 @@ export class Stdout extends EventEmitter {
     return this
   }
 
-  public send (type: string = LoggerTypes.LOG): this {
+  public send (type: string = LoggerTypes.LOG, format?: LoggerFormat): this {
+    if (this.autoDatetime === true) {
+      this.dateime(chalk.gray.bind(chalk), true)
+    }
+
+    this.type(type, format)
+
     let heads = this.heads.splice(0)
     let messages = this.messages.splice(0)
-
     this.emit(type, { heads, messages })
-    this.hasDatetime = false
 
+    this.hasDatetime = false
     return this
   }
 
@@ -88,6 +120,19 @@ export class Stdout extends EventEmitter {
 
   public loading (value: number, total: number, message: string): void {
     this.emit('loading', { value, total, message })
+  }
+
+  public destory (): void {
+    this.removeAllListeners()
+
+    this.heads.splice(0)
+    this.messages.splice(0)
+
+    this.heads = undefined
+    this.messages = undefined
+    this.hasDatetime = undefined
+
+    this.destory = Function.prototype as any
   }
 }
 
