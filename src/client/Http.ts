@@ -24,7 +24,10 @@ export default class Client extends BaseClient {
     const { deployServer: server } = this.options
     const serverUrl = /^https?:\/\//.test(server) ? server : `http://${server}`
     const axiosOptions: AxiosRequestConfig = {
-      baseURL: serverUrl
+      baseURL: serverUrl,
+      headers: {
+        'content-type': 'application/json;charset=utf-8'
+      }
     }
 
     this.request = axios.create(axiosOptions)
@@ -37,6 +40,7 @@ export default class Client extends BaseClient {
       if (isPlainObject(response.data)) {
         let { message, ...others } = response.data
         let error: CommandError = new Error(message)
+
         Object.assign(error, others)
         return Promise.reject(error)
       }
@@ -154,8 +158,8 @@ export default class Client extends BaseClient {
     return Promise.reject(new Error('Qrcode is invalid'))
   }
 
-  public async checkin (): Promise<any> {
-    const response = await this.request.get('/checkin')
+  public async access (): Promise<any> {
+    const response = await this.request.get('/access')
     return response.data
   }
 }

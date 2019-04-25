@@ -41,7 +41,7 @@ export default class Server extends BaseService {
     this.route('GET', '/status', this.status.bind(this))
     this.route('POST', '/upload', this.upload.bind(this))
     this.route('GET', '/login', this.login.bind(this))
-    this.route('GET', '/checkin', this.checkin.bind(this))
+    this.route('GET', '/access', this.access.bind(this))
 
     return this.server.listen(port)
   }
@@ -114,7 +114,7 @@ export default class Server extends BaseService {
     await this.execute(command)
   }
 
-  public async checkin (tunnel: Tunnel): Promise<void> {
+  public async access (tunnel: Tunnel): Promise<void> {
     const { login: promise } = this.promises
 
     if (!(promise instanceof Promise)) {

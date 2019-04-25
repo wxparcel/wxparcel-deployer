@@ -2,6 +2,8 @@ import program = require('commander')
 import pkg = require('../package.json')
 import './commander/server'
 import './commander/upload'
+import './commander/login'
+import './commander/access'
 
 program
 .version(pkg.version, '-v, --version')
