@@ -47,8 +47,7 @@ export default class Server {
         return Promise.resolve(false)
       }
 
-      const format = chalk.greenBright.bind(chalk)
-      this.stdout.head('HIT', format).write(url).write(route)
+      this.stdout.head('HIT', chalk.green.bold).write(url).write(route)
 
       const handleSuccess = () => {
         this.stdout.ok()
@@ -89,8 +88,7 @@ export default class Server {
       }
 
       const method = request.method.toUpperCase()
-      const format = chalk.cyanBright.bind(chalk)
-      this.stdout.head(method, format).write(connection.status + '').info(request.url)
+      this.stdout.head(method, chalk.cyan.bold).write(connection.status + '').info(request.url)
 
       connection.destroy()
     }

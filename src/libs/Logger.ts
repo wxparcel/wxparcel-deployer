@@ -99,19 +99,19 @@ export default class Logger {
   }
 
   public ok (message: LoggerMessages, heads?: LoggerHeads): void {
-    return this.log(message, heads, chalk.green.bind(chalk))
+    return this.log(message, heads, chalk.green.bold)
   }
 
   public info (message: LoggerMessages, heads?: LoggerHeads): void {
-    return this.log(message, heads, chalk.cyan.bind(chalk))
+    return this.log(message, heads, chalk.cyan.bold)
   }
 
   public warn (message: LoggerMessages, heads?: LoggerHeads): void {
-    return this.log(message, heads, chalk.yellow.bind(chalk))
+    return this.log(message, heads, chalk.yellow.bold)
   }
 
   public error (message: LoggerMessages, heads?: LoggerHeads): void {
-    return this.log(message, heads, chalk.red.bind(chalk))
+    return this.log(message, heads, chalk.red.bold)
   }
 
   public log (message: string | Error | LoggerMessages, head?: string | LoggerHeads, format?: LoggerFormat): void {

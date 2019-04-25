@@ -15,6 +15,8 @@ export class Stdout extends EventEmitter {
     LoggerTypes.CLEAR
   ]
 
+  private name: string
+  private options: StdoutOptions
   private heads: LoggerHeads
   private messages: LoggerMessages
   private _hasDatetime: boolean
@@ -32,16 +34,18 @@ export class Stdout extends EventEmitter {
     this._hasDatetime = this.autoDatetime === true ? true : !!value
   }
 
-  constructor (options: StdoutOptions = {}) {
+  constructor (name: string = '', options: StdoutOptions = {}) {
     super()
 
+    this.name = name
+    this.options = options
     this.heads = []
     this.messages = []
     this.autoDatetime = options.hasOwnProperty('autoDatetime') ? options.autoDatetime : true
   }
 
-  public born (): Stdout {
-    const service = new Stdout()
+  public born (name: string = '', options: StdoutOptions = this.options): Stdout {
+    const service = new Stdout(name, options)
     Stdout.TYPES.forEach((event) => service.on(event, (data) => this.emit(event, data)))
     return service
   }
@@ -51,7 +55,7 @@ export class Stdout extends EventEmitter {
     return this
   }
 
-  public dateime (format: LoggerFormat = chalk.gray.bind(chalk), force: boolean = false): this {
+  public dateime (format: LoggerFormat = chalk.gray.bold, force: boolean = false): this {
     if (this.hasDatetime === true && force !== true) {
       return this
     }
@@ -71,27 +75,27 @@ export class Stdout extends EventEmitter {
 
   public log (message?: string | Error, format?: LoggerFormat): void {
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.LOG, chalk.whiteBright.bind(chalk))
+    this.send(LoggerTypes.LOG, chalk.white.bold)
   }
 
   public ok (message?: string | Error, format?: LoggerFormat): void {
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.OK, chalk.greenBright.bind(chalk))
+    this.send(LoggerTypes.OK, chalk.green.bold)
   }
 
   public info (message?: string | Error, format?: LoggerFormat): void {
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.INFO, chalk.cyanBright.bind(chalk))
+    this.send(LoggerTypes.INFO, chalk.cyan.bold)
   }
 
   public warn (message?: string | Error, format?: LoggerFormat): void {
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.WARN, chalk.yellowBright.bind(chalk))
+    this.send(LoggerTypes.WARN, chalk.yellow.bold)
   }
 
   public error (message?: string | Error, format?: LoggerFormat): void {
     arguments.length > 0 && this.write(message, format)
-    this.send(LoggerTypes.ERROR, chalk.redBright.bind(chalk))
+    this.send(LoggerTypes.ERROR, chalk.red.bold)
   }
 
   public write (content: string | Error, format?: LoggerFormat): this {
@@ -101,9 +105,10 @@ export class Stdout extends EventEmitter {
 
   public send (type: string = LoggerTypes.LOG, format?: LoggerFormat): this {
     if (this.autoDatetime === true) {
-      this.dateime(chalk.gray.bind(chalk), true)
+      this.dateime(chalk.gray.bold, true)
     }
 
+    this.name && this.type(this.name, chalk.green.bold)
     this.type(type, format)
 
     let heads = this.heads.splice(0)

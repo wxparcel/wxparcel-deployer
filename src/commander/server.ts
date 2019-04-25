@@ -56,9 +56,9 @@ export const server = async (options: ServerCLIOptions = {}) => {
     return Promise.reject(error)
   })
 
-  stdoutServ.clear()
   const log = (message) => console.log(message)
 
+  stdoutServ.clear()
   log(chalk.gray.bold('WXParcel Server'))
   log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
