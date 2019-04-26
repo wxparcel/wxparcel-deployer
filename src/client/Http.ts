@@ -26,15 +26,15 @@ export default class Client extends BaseClient {
     const axiosOptions: AxiosRequestConfig = {
       baseURL: serverUrl,
       headers: {
-        'Accept': 'application/json;charset=utf-8'
+        'Accept': 'application/json'
       }
     }
 
-    const handleResponse = (response: AxiosResponse) => {
+    const ResponseInterceptor = (response: AxiosResponse) => {
       return response
     }
 
-    const handleRejection = (rejection: AxiosError) => {
+    const RejectionInterceptor = (rejection: AxiosError) => {
       let { response } = rejection
       if (!response) {
         return Promise.reject(new Error('request could not be sent, please check the network status or server status'))
@@ -52,7 +52,7 @@ export default class Client extends BaseClient {
     }
 
     this.request = axios.create(axiosOptions)
-    this.request.interceptors.response.use(handleResponse, handleRejection)
+    this.request.interceptors.response.use(ResponseInterceptor, RejectionInterceptor)
   }
 
   public async status () {
@@ -122,8 +122,8 @@ export default class Client extends BaseClient {
 
       const contentSzie = await promisify(formData.getLength.bind(formData))().catch(catchError)
       const headers = {
-        'Accept': 'application/json',
-        'Content-Type': `multipart/form-data; charset=utf-8; boundary="${formData.getBoundary()}"`,
+        'Accept': 'application/json;charset=utf-8',
+        'Content-Type': `multipart/form-data;charset=utf-8;boundary="${formData.getBoundary()}"`,
         'Content-Length': contentSzie
       }
 

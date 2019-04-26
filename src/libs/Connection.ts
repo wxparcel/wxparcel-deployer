@@ -47,8 +47,8 @@ export default class Connection {
     let status = response.status || this.status || 200
     let message = isJson ? JSON.stringify({ status, ...response }) : response.message || ''
 
-    this.writeHead('Content-Type', 'text/plain;charset=utf-8')
-    this.writeHead('Content-Length', message.length + '')
+    this.writeHead('Content-Type', isJson ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8')
+    this.writeHead('Content-Length', Buffer.from(message).byteLength + '')
 
     this.response.writeHead(status, this.head)
     this.response.end(message)

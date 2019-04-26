@@ -1,6 +1,8 @@
 import fs = require('fs-extra')
 import path = require('path')
 import { SpawnOptions } from 'child_process'
+import isPlainObject = require('lodash/isPlainObject')
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
 import OptionManager from '../server/OptionManager'
 import { validProject } from '../share/wx'
 import { spawnPromisify, killToken as genKillToken, killProcess } from '../share/fns'
@@ -9,10 +11,44 @@ import { Stdout, DevToolQRCodeHandle, CommandError } from '../typings'
 export default class DevTool {
   private options: OptionManager
   private warders: Array<{ token: Symbol, kill: () => void }>
+  private request: AxiosInstance
 
   constructor (options: OptionManager) {
     this.options = options
     this.warders = []
+
+    const axiosOptions = {
+      baseURL: 'http://127.0.0.1:34368'
+    }
+
+    const ResponseInterceptor = (response: AxiosResponse) => {
+      const { status, data: message } = response
+      if (status === 200) {
+        return Promise.resolve(response)
+      }
+
+      return Promise.reject(new Error(message))
+    }
+
+    const RejectionInterceptor = (rejection: AxiosError) => {
+      const { response } = rejection
+      if (!response) {
+        return Promise.reject(new Error('request could not be sent, please check the network status or server status'))
+      }
+
+      if (isPlainObject(response.data)) {
+        const { code, error: message } = response.data
+        const error: CommandError = new Error(message)
+        error.code = code
+
+        return Promise.reject(error)
+      }
+
+      return Promise.reject(new Error(response.data))
+    }
+
+    this.request = axios.create(axiosOptions)
+    this.request.interceptors.response.use(ResponseInterceptor, RejectionInterceptor)
   }
 
   public open (folder: string): Promise<any> {
@@ -85,19 +121,15 @@ export default class DevTool {
   }
 
   public upload (folder: string, version: string, description: string, killToken?: symbol): Promise<any> {
-    const command = (statsFile) => {
-      const valid = validProject(folder)
-      if (valid !== true) {
-        return Promise.reject(valid)
+    const command = async (statsFile) => {
+      const params = {
+        projectpath: encodeURIComponent(folder),
+        version: version,
+        desc: description,
+        infooutput: statsFile
       }
 
-      const params = [
-        '--upload', `${version}@${folder}`,
-        '--upload-desc', encodeURIComponent(description),
-        '--upload-info-output', statsFile
-      ]
-
-      return this.command(params)
+      return this.request.get('/upload', { params })
     }
 
     return this.execute(command, killToken)

@@ -181,6 +181,7 @@ export default class Server extends BaseService {
       let { status, message } = this.resolveCommandError(content)
       let data = this.genStandardResponse({ status, message })
       connection.end(data)
+
     } else {
       let status = connection.status
       let data = this.genStandardResponse({ status, ...content })

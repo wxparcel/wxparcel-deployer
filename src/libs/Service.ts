@@ -88,19 +88,19 @@ export default class Service {
     switch (error.code) {
       case 255: {
         let status = 520
-        let message = 'command fail, please retry'
+        let message = error.message || 'command fail, please retry'
         return { status, message }
       }
 
       case -408: {
         let status = 408
-        let message = 'command timeout, please retry'
+        let message = error.message || 'command timeout, please retry'
         return { status, message }
       }
 
       default: {
-        let status = error.code
-        let message = `Command fail with error code: ${error.code}`
+        let status = 500
+        let message = error.message || `command fail with error code: ${error.code}`
         return { status, message }
       }
     }
