@@ -1,18 +1,18 @@
 import program = require('commander')
 import ClientOptions from '../client/OptionManager'
 import HttpClient from '../client/Http'
-import StdoutServ from '../services/stdout'
+import { Stdout } from '../services/stdout'
 import { wrapClientAction } from '../share/command'
 
-const login = async (_, globalOptions: ClientOptions) => {
+const login = async (_, globalOptions: ClientOptions, stdout: Stdout) => {
   const client = new HttpClient(globalOptions)
   const qrcode = await client.login().catch((error) => {
-    StdoutServ.error(error)
+    stdout.error(error)
     process.exit(3)
   })
 
-  StdoutServ.info('please scan the QR code to login')
-  StdoutServ.log(qrcode)
+  stdout.info('please scan the QR code to login')
+  stdout.log(qrcode)
 }
 
 program

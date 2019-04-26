@@ -1,12 +1,12 @@
 import fs = require('fs-extra')
 import ClientOptions from '../client/OptionManager'
 import Logger from '../libs/Logger'
-import StdoutServ from '../services/stdout'
+import Stdout from '../services/stdout'
 
 export const wrapClientAction = (action) => (options) => {
-  let { config: configFile } = options
-  let defaultOptions: any = {}
+  const { config: configFile } = options
 
+  let defaultOptions: any = {}
   if (configFile) {
     if (!fs.existsSync(configFile)) {
       throw new Error(`Config file is not found, please ensure config file exists. ${configFile}`)
@@ -16,13 +16,16 @@ export const wrapClientAction = (action) => (options) => {
     defaultOptions = defaultOptions.default || defaultOptions
   }
 
-  let globalOptions = new ClientOptions({
+  const globalOptions = new ClientOptions({
     ...defaultOptions,
     server: options.server
   })
 
-  let logger = new Logger({ method: globalOptions.logMethod })
-  logger.listen(StdoutServ)
+  const logger = new Logger({ method: globalOptions.logMethod })
+  logger.listen(Stdout)
 
-  return action(options, globalOptions)
+  const stdout = Stdout.born('CLIENT')
+  const finish = () => stdout.destory()
+
+  return action(options, globalOptions, stdout).then(finish).catch(finish)
 }

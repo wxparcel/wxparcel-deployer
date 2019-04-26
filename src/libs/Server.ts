@@ -45,7 +45,7 @@ export default class Server {
         return Promise.resolve(false)
       }
 
-      stdout.head('HIT').write(url).log(route)
+      stdout.head('HIT').log(route)
 
       const handleSuccess = () => {
         connection.end()

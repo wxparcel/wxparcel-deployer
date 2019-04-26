@@ -4,11 +4,11 @@ import program = require('commander')
 import chalk from 'chalk'
 import ClientOptions from '../client/OptionManager'
 import HttpClient from '../client/Http'
-import StdoutServ from '../services/stdout'
+import { Stdout } from '../services/stdout'
 import { wrapClientAction } from '../share/command'
 import { ClientCLIOptions } from '../typings'
 
-const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions) => {
+const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions, stdout: Stdout) => {
   let { version, message } = options
   if (!options.hasOwnProperty('version')) {
     let pkgFile = path.join(globalOptions.rootPath, 'package.json')
@@ -26,16 +26,16 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
   const folder = options.folder || globalOptions.rootPath
   const client = new HttpClient(globalOptions)
 
-  StdoutServ.clear()
-  StdoutServ.log(`start upload ${chalk.bold(folder)}`)
+  stdout.clear()
+  stdout.log(`start upload ${chalk.bold(folder)}`)
 
   const uploadPath = options.hasOwnProperty('distributor') ? '/collector' : '/upload'
   await client.upload(folder, version, message, uploadPath).catch((error) => {
-    StdoutServ.error(error)
+    stdout.error(error)
     process.exit(3)
   })
 
-  StdoutServ.ok(`project ${chalk.bold(folder)} deploy completed`)
+  stdout.ok(`project ${chalk.bold(folder)} deploy completed`)
 }
 
 program

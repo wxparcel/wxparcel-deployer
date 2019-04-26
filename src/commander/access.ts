@@ -1,17 +1,17 @@
 import program = require('commander')
 import ClientOptions from '../client/OptionManager'
 import HttpClient from '../client/Http'
-import StdoutServ from '../services/stdout'
+import { Stdout } from '../services/stdout'
 import { wrapClientAction } from '../share/command'
 
-const access = async (_, globalOptions: ClientOptions) => {
+const access = async (_, globalOptions: ClientOptions, stdout: Stdout) => {
   const client = new HttpClient(globalOptions)
   await client.access().catch((error) => {
-    StdoutServ.error(error)
+    stdout.error(error)
     process.exit(3)
   })
 
-  StdoutServ.ok('logined')
+  stdout.ok('logined')
 }
 
 program

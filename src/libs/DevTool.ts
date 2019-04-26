@@ -76,11 +76,11 @@ export default class DevTool {
     const command: DevToolCommand = (statsFile: string) => {
       const params = {
         format: 'base64',
-        qroutput: qrcodeFile,
-        resultoutput: statsFile
+        qroutput: encodeURIComponent(qrcodeFile),
+        resultoutput: encodeURIComponent(statsFile)
       }
 
-      return this.request.get('/open', { params })
+      return this.request.get('/login', { params })
     }
 
     return this.execute(command)

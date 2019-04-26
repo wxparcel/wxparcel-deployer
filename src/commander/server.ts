@@ -35,7 +35,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
 
   const globalOptions = new OptionManager({
     ...defaultOptions,
-    devToolServer: options.devtool || 'http://127.0.0.1:10696',
+    devToolServer: options.devtool || 'http://127.0.0.1:28337',
     port: port
   })
 
