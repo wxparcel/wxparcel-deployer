@@ -13,8 +13,8 @@ import { unitSize } from '../share/fns'
 import { CommandError } from '../typings'
 
 export default class Client extends BaseClient {
-  private options: ClientOptions
-  private request: AxiosInstance
+  public options: ClientOptions
+  public request: AxiosInstance
 
   constructor (options: ClientOptions) {
     super()
@@ -26,15 +26,18 @@ export default class Client extends BaseClient {
     const axiosOptions: AxiosRequestConfig = {
       baseURL: serverUrl,
       headers: {
-        'content-type': 'application/json;charset=utf-8'
+        'Accept': 'application/json;charset=utf-8'
       }
     }
 
-    this.request = axios.create(axiosOptions)
-    this.request.interceptors.response.use((response: AxiosResponse) => response, (rejection: AxiosError) => {
+    const handleResponse = (response: AxiosResponse) => {
+      return response
+    }
+
+    const handleRejection = (rejection: AxiosError) => {
       let { response } = rejection
       if (!response) {
-        return Promise.reject(new Error('The request could not be sent, please check the network status or server status'))
+        return Promise.reject(new Error('request could not be sent, please check the network status or server status'))
       }
 
       if (isPlainObject(response.data)) {
@@ -46,7 +49,10 @@ export default class Client extends BaseClient {
       }
 
       return Promise.reject(new Error(response.data))
-    })
+    }
+
+    this.request = axios.create(axiosOptions)
+    this.request.interceptors.response.use(handleResponse, handleRejection)
   }
 
   public async status () {
@@ -89,7 +95,7 @@ export default class Client extends BaseClient {
     return response
   }
 
-  private async uploadFile (url: string, file: string, data: { [key: string]: any }): Promise<any> {
+  public async uploadFile (url: string, file: string, data: { [key: string]: any }): Promise<any> {
     if (!fs.existsSync(file)) {
       return Promise.reject(new Error(`File ${file} is not found`))
     }

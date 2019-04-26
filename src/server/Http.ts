@@ -9,17 +9,18 @@ import Connection from '../libs/Connection'
 import OptionManager from './OptionManager'
 import Queue from '../services/queue'
 import StdoutSrv from '../services/stdout'
-import { ensureDirs, unzip, removeFiles, killProcess } from '../share/fns'
+import Aider from './Aider'
+import { ensureDirs, unzip, removeFiles } from '../share/fns'
 
 import { IncomingMessage } from 'http'
 import { CommandError, StandardJSONResponse, Tunnel } from '../typings'
 
 export default class Server extends BaseService {
-  private options: OptionManager
-  private server: HttpServer
-  private devTool: DevTool
-  private promises: { [key: string ]: Promise<any> }
-  private tokens: { [key: string]: symbol }
+  public options: OptionManager
+  public server: HttpServer
+  public devTool: DevTool
+  public isLogin: boolean
+  public socket: Aider
 
   get httpServer () {
     return this.server.httpServer
@@ -31,8 +32,6 @@ export default class Server extends BaseService {
     this.options = options
     this.devTool = devTool || new DevTool(this.options)
     this.server = server || new HttpServer()
-    this.promises = {}
-    this.tokens = {}
   }
 
   public start (): Promise<void> {
@@ -96,48 +95,46 @@ export default class Server extends BaseService {
         resolve()
       }
 
+      const handleSuccess = () => {
+        this.isLogin = true
+      }
+
       const catchError = (error: CommandError) => {
         tunnel.feedback(error)
         return Promise.reject(error)
       }
 
-      this.promises.login = this.devTool.login(feedbackQrCode, killToken).catch(catchError)
-      this.tokens.login = killToken
+      return this.devTool.login(feedbackQrCode, killToken).then(handleSuccess).catch(catchError)
     })
-
-    const { login: killToken } = this.tokens
-    killToken && killProcess(killToken)
-
-    this.tokens.login = null
-    this.promises.login = null
 
     await this.execute(command)
   }
 
   public async access (tunnel: Tunnel): Promise<void> {
-    const { login: promise } = this.promises
+    tunnel.feedback({ message: this.isLogin === true ? 'logined' : 'unlogined' })
+  }
 
-    if (!(promise instanceof Promise)) {
-      tunnel.feedback({ status: 401, message: 'unlogined' })
-      return
+  public async activate (tunnel: Tunnel): Promise<void> {
+    const { request, feedback } = tunnel
+    const { serverUrl, socketId, projectId } = await this.extract(request)
+
+    this.socket = await this.createAider(projectId, serverUrl, this.devTool)
+
+    const disconnect = () => {
+      this.socket = null
     }
 
-    const remove = () => {
-      delete this.promises.login
-    }
+    const data = { socketId, projectId }
+    this.socket.on('disconnect', disconnect)
+    this.socket.send('connectSuccess', { data })
 
-    tunnel.request.once('end', remove)
+    feedback()
+  }
 
-    const completed = () => {
-      tunnel.feedback({ message: 'logined success' })
-    }
-
-    const catchError = (error: CommandError) => {
-      tunnel.feedback(error)
-      return Promise.reject(error)
-    }
-
-    promise.then(completed).catch(catchError)
+  public async createAider (id: string, url: string, devTool: DevTool) {
+    let socket = new Aider(id, this.options, devTool)
+    await socket.start(url)
+    return socket
   }
 
   public route (methods: string | Array<string>, path: string, handle: (tunnel: Tunnel) => Promise<void>) {
@@ -152,7 +149,7 @@ export default class Server extends BaseService {
     this.server.route(methods, path, router)
   }
 
-  private extract (request: IncomingMessage): Promise<{ [key: string]: any }> {
+  public extract (request: IncomingMessage): Promise<{ [key: string]: any }> {
     return new Promise((resolve, reject) => {
       const { uploadPath } = this.options
       const form = new IncomingForm()
@@ -175,7 +172,7 @@ export default class Server extends BaseService {
     })
   }
 
-  private feedback (connection: Connection, content: StandardJSONResponse | CommandError) {
+  public feedback (connection: Connection, content: StandardJSONResponse | CommandError) {
     function isCommandError (content: StandardJSONResponse | CommandError): content is CommandError {
       return 'code' in content
     }

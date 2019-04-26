@@ -12,10 +12,10 @@ import {
 } from '../typings'
 
 export default class Server extends BaseService {
-  private options: OptionManager
-  private devTool: DevTool
-  private server: SocketServer
-  private events: Array<WebSocketEevent>
+  public options: OptionManager
+  public devTool: DevTool
+  public server: SocketServer
+  public events: Array<WebSocketEevent>
 
   constructor (options: OptionManager, devTool?: DevTool) {
     super()
@@ -106,7 +106,7 @@ export default class Server extends BaseService {
     this.events.push({ type, action })
   }
 
-  private feedback (socket: Socket, type: string, data: StandardJSONResponse = {}): void {
+  public feedback (socket: Socket, type: string, data: StandardJSONResponse = {}): void {
     const params: WebSocketMessage = {
       action: type,
       payload: this.genStandardResponse(data)

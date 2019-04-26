@@ -11,7 +11,7 @@ const login = async (_, globalOptions: ClientOptions) => {
     process.exit(3)
   })
 
-  StdoutServ.info('Please scan the QR code to log in')
+  StdoutServ.info('please scan the QR code to login')
   StdoutServ.log(qrcode)
 }
 

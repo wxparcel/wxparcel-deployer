@@ -27,7 +27,7 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
   const client = new HttpClient(globalOptions)
 
   StdoutServ.clear()
-  StdoutServ.log(`start uploading ${chalk.bold(folder)}`)
+  StdoutServ.log(`start upload ${chalk.bold(folder)}`)
 
   const uploadPath = options.hasOwnProperty('distributor') ? '/collector' : '/upload'
   await client.upload(folder, version, message, uploadPath).catch((error) => {

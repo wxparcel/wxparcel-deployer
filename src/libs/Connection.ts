@@ -41,7 +41,7 @@ export default class Connection {
       return
     }
 
-    let contentType = this.request.headers['content-type'] || ''
+    let contentType = this.request.headers['accept'] || ''
     let isJson = -1 !== contentType.search('application/json')
 
     let status = response.status || this.status || 200
