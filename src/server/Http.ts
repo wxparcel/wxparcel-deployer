@@ -131,9 +131,9 @@ export default class Server extends BaseService {
     feedback()
   }
 
-  public async createAider (id: string, url: string, devTool: DevTool) {
+  public async createAider (id: string, server: string, devTool: DevTool) {
     let socket = new Aider(id, this.options, devTool)
-    await socket.start(url)
+    await socket.connect(server)
     return socket
   }
 

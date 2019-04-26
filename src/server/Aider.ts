@@ -1,4 +1,3 @@
-import { Server as HttpServer } from 'http'
 import SocketIO = require('socket.io-client')
 import OptionManager from './OptionManager'
 import DevTool from '../libs/DevTool'
@@ -22,8 +21,8 @@ export default class Aider extends BaseService {
     this.id = id
   }
 
-  public start (url: string | HttpServer): Promise<void> {
-    if (url instanceof HttpServer) {
+  public connect (url: string): Promise<void> {
+    if (typeof url !== 'string') {
       return Promise.reject(new Error('url must be a string'))
     }
 

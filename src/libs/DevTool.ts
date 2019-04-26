@@ -161,20 +161,19 @@ export default class DevTool {
     let statsFile = path.join(tempPath, `./stats/${uid}.json`)
     fs.ensureFileSync(statsFile)
 
-    killToken = killToken || genKillToken()
-
-    let statsPromise = this.watchFile(statsFile, killToken)
+    let watchKillToken = genKillToken()
+    let statsPromise = this.watchFile(statsFile, watchKillToken)
     let excePromise = task(statsFile, killToken)
 
     const handleSuccess = (response) => {
       let [content] = response
-      fs.removeSync(statsFile)
 
+      fs.removeSync(statsFile)
       return JSON.parse(content.toString())
     }
 
     const catchError = (error) => {
-      this.kill(killToken)
+      this.kill(watchKillToken)
 
       fs.removeSync(statsFile)
       return Promise.reject(error)
@@ -221,6 +220,8 @@ export default class DevTool {
 
   private spawn (command?: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: symbol): Promise<any> {
     return spawnPromisify(command, params, options, stdout, killToken).then((code) => {
+      this.kill(killToken)
+
       if (code !== 0) {
         let error = new Error(`Command ${command} ${params.join(' ')} fail, error code: ${code}`) as CommandError
         error.code = code
