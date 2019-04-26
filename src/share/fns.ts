@@ -138,17 +138,3 @@ export const spawnPromisify = (cli: string, params?: Array<string>, options?: Sp
     process.on('SIGINT', handleProcessSigint)
   })
 }
-
-export const killToken = () => {
-  return Symbol('Kill Token')
-}
-
-export const killProcess = (token: Symbol) => {
-  let index = processes.findIndex((item) => item.token === token)
-  if (-1 === index) {
-    return
-  }
-
-  let [cp] = processes.splice(index, 1)
-  cp.kill()
-}

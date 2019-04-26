@@ -6,12 +6,12 @@ import { wrapClientAction } from '../share/command'
 
 const access = async (_, globalOptions: ClientOptions, stdout: Stdout) => {
   const client = new HttpClient(globalOptions)
-  await client.access().catch((error) => {
+  const response = await client.access().catch((error) => {
     stdout.error(error)
     process.exit(3)
   })
 
-  stdout.ok('logined')
+  stdout.ok(response.message)
 }
 
 program

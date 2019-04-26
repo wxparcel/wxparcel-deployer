@@ -25,6 +25,7 @@ export default class Client extends BaseClient {
     const serverUrl = /^https?:\/\//.test(server) ? server : `http://${server}`
     const axiosOptions: AxiosRequestConfig = {
       baseURL: serverUrl,
+      timeout: 60e3,
       headers: {
         'Accept': 'application/json'
       }

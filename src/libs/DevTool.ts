@@ -16,7 +16,8 @@ export default class DevTool {
     this.warders = []
 
     const axiosOptions = {
-      baseURL: options.devToolServer
+      baseURL: options.devToolServer,
+      timeout: 30e3
     }
 
     const ResponseInterceptor = (response: AxiosResponse) => {

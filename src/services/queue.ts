@@ -18,7 +18,7 @@ export class Queue {
   }
 
   public push (...promises: Array<Promise<void>>) {
-    let filterAndBindings = (promise) => {
+    const filterAndBindings = (promise) => {
       if (promise instanceof Promise) {
         let removePromise = this.remove.bind(this, promise)
         promise.then(removePromise).catch(removePromise)

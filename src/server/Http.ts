@@ -8,7 +8,7 @@ import BaseService from '../libs/Service'
 import Connection from '../libs/Connection'
 import OptionManager from './OptionManager'
 import Queue from '../services/queue'
-import StdoutSrv, { Stdout } from '../services/stdout'
+import { Stdout } from '../services/stdout'
 import Aider from './Aider'
 import { ensureDirs, unzip, removeFiles } from '../share/fns'
 
@@ -17,8 +17,8 @@ import { CommandError, StandardJSONResponse, Tunnel } from '../typings'
 
 export default class Server extends BaseService {
   public options: OptionManager
-  public server: HttpServer
   public devTool: DevTool
+  public server: HttpServer
   public isLogin: boolean
   public socket: Aider
 
@@ -32,6 +32,7 @@ export default class Server extends BaseService {
     this.options = options
     this.devTool = devTool || new DevTool(this.options)
     this.server = server || new HttpServer()
+    this.isLogin = false
   }
 
   public start (): Promise<void> {
@@ -50,11 +51,6 @@ export default class Server extends BaseService {
   }
 
   public async upload (tunnel: Tunnel): Promise<void> {
-    if (Queue.idle === false) {
-      tunnel.stdout.log('wait for other commands')
-      await Queue.waitForIdle()
-    }
-
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
 
@@ -79,6 +75,10 @@ export default class Server extends BaseService {
       })
     }
 
+    if (Queue.idle === false) {
+      tunnel.stdout.log('wait for other commands')
+    }
+
     await this.execute(command).catch(catchError)
     await removeFiles(uploadFile, projFolder)
 
@@ -86,26 +86,37 @@ export default class Server extends BaseService {
     tunnel.feedback({ message: 'deploy completed' })
   }
 
-  public async login (tunnel: Tunnel): Promise<void> {
-    const command = (): Promise<any> => new Promise((resolve) => {
+  public login (tunnel: Tunnel): Promise<void> {
+    return new Promise((resolve) => {
       const feedbackQrCode = (qrcode: Buffer) => {
         tunnel.feedback({ data: qrcode })
         resolve()
       }
 
-      const handleSuccess = () => {
-        this.isLogin = true
+      const command = async () => {
+        const handleSuccess = (response) => {
+          if (response.status === 'SUCCESS') {
+            this.isLogin = true
+            return
+          }
+
+          return Promise.reject(new Error('login fail'))
+        }
+
+        const catchError = (error: CommandError) => {
+          tunnel.feedback(error)
+          return Promise.reject(error)
+        }
+
+        return this.devTool.login(feedbackQrCode).then(handleSuccess).catch(catchError)
       }
 
-      const catchError = (error: CommandError) => {
-        tunnel.feedback(error)
-        return Promise.reject(error)
+      if (Queue.idle === false) {
+        tunnel.stdout.log('wait for other commands')
       }
 
-      return this.devTool.login(feedbackQrCode).then(handleSuccess).catch(catchError)
+      this.execute(command)
     })
-
-    await this.execute(command)
   }
 
   public async access (tunnel: Tunnel): Promise<void> {
@@ -189,8 +200,6 @@ export default class Server extends BaseService {
   }
 
   public destroy (): void {
-    super.destroy()
-
     this.server.close()
     this.devTool.destroy()
 

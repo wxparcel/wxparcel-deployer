@@ -2,7 +2,6 @@ import SocketIO = require('socket.io')
 import OptionManager from './OptionManager'
 import BaseService from '../libs/Service'
 import DevTool from '../libs/DevTool'
-import { killProcess } from '../share/fns'
 
 import { Server as HttpServer } from 'http'
 import { Server as SocketServer, Socket } from 'socket.io'
@@ -103,8 +102,6 @@ export default class Server extends BaseService {
   }
 
   public destroy (): void {
-    super.destroy()
-
     this.server.close()
     this.devTool.destroy()
 

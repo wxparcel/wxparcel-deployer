@@ -1,54 +1,21 @@
 import defaultsDeep = require('lodash/defaultsDeep')
 import pick = require('lodash/pick')
 import Queue from '../services/queue'
-import { killToken as genKillToken, killProcess } from '../share/fns'
-
 import { CommandError, StandardJSONResponse, ServiceCommand } from '../typings'
 
 export default class Service {
-  private killTokens: Array<symbol>
-
   get idle () {
     return Queue.size === 0
   }
 
-  constructor () {
-    this.killTokens = []
-  }
-
-  public execute (command: ServiceCommand, killToken?: symbol): Promise<void> {
-    const execute = () => {
-      const removeKillToken = (killToken: symbol) => {
-        if (Array.isArray(this.killTokens)) {
-          let index = this.killTokens.findIndex((token) => token === killToken)
-          index === -1 && this.killTokens.splice(index, 1)
-        }
-      }
-
-      const handleComplete = (response) => {
-        removeKillToken(killToken)
-        return response
-      }
-
-      const handleError = (error) => {
-        removeKillToken(killToken)
-        return Promise.reject(error)
-      }
-
-      killToken = killToken || genKillToken()
-      this.killTokens.push(killToken)
-
-      const promise = command(killToken).then(handleComplete).catch(handleError)
-      Queue.push(promise)
-
-      return promise
+  public async execute (command: ServiceCommand, killToken?: symbol): Promise<void> {
+    if (Queue.idle === false) {
+      await Queue.waitForIdle()
     }
 
-    if (Queue.size > 0) {
-      return execute()
-    }
-
-    return Promise.all(Queue.promise).then(execute)
+    const promise = command(killToken)
+    Queue.push(promise)
+    return promise
   }
 
   public genStandardResponse (content: StandardJSONResponse): StandardJSONResponse {
@@ -104,14 +71,5 @@ export default class Service {
         return { status, message }
       }
     }
-  }
-
-  public destroy (): void {
-    if (Array.isArray(this.killTokens)) {
-      let killTokens = this.killTokens.splice(0)
-      killTokens.forEach((killToken) => killProcess(killToken))
-    }
-
-    this.killTokens = undefined
   }
 }
