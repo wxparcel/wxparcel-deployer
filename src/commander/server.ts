@@ -35,12 +35,12 @@ export const server = async (options: ServerCLIOptions = {}) => {
 
   const globalOptions = new OptionManager({
     ...defaultOptions,
-    devToolCli: options.devToolCli,
+    devToolServer: options.devtool || 'http://127.0.0.1:10696',
     port: port
   })
 
-  if (!(globalOptions.devToolCli)) {
-    throw new Error('please set devtool cli')
+  if (!globalOptions.devToolServer) {
+    throw new Error('please set devtool server')
   }
 
   const method = globalOptions.logMethod
@@ -61,8 +61,8 @@ export const server = async (options: ServerCLIOptions = {}) => {
   log(chalk.gray.bold('WXParcel Server'))
   log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
-  globalOptions.devToolCli && log(`DevTool CLI: ${chalk.cyan.bold(globalOptions.devToolCli)}`)
-  log(chalk.magenta('Deploy server is running, please make sure wx devtool has been logined.'))
+  log(`DevTool: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
+  log(chalk.magenta('deploy server is running, please make sure wx devtool has been logined.'))
 
   let handleProcessSigint = process.exit.bind(process)
   let handleProcessExit = () => {
@@ -84,5 +84,5 @@ program
 .description('start deploy server')
 .option('-c, --config <config>', 'settting config file')
 .option('-p, --port <port>', 'setting server port, default use idle port')
-.option('--dev-tool-cli <devToolCli>', 'setting devtool cli file path')
+.option('-d, --devtool <devtool>', 'setting devtool server')
 .action(server)

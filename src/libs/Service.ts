@@ -3,7 +3,7 @@ import pick = require('lodash/pick')
 import Queue from '../services/queue'
 import { killToken as genKillToken, killProcess } from '../share/fns'
 
-import { CommandError, StandardJSONResponse } from '../typings'
+import { CommandError, StandardJSONResponse, ServiceCommand } from '../typings'
 
 export default class Service {
   private killTokens: Array<symbol>
@@ -16,7 +16,7 @@ export default class Service {
     this.killTokens = []
   }
 
-  public execute (command: (killToken: symbol) => Promise<void>, killToken?: symbol): Promise<void> {
+  public execute (command: ServiceCommand, killToken?: symbol): Promise<void> {
     const execute = () => {
       const removeKillToken = (killToken: symbol) => {
         if (Array.isArray(this.killTokens)) {

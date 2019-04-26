@@ -1,5 +1,6 @@
 import { Socket as WebSocket } from 'socket.io'
 import { Socket as WebSocketClient } from 'socket.io-client'
+import { Stdout as StdoutService } from './services/stdout'
 
 export type Stdout = (data: Buffer, type?: string) => void
 
@@ -25,7 +26,7 @@ export interface ClientCLIOptions {
 export interface ServerCLIOptions {
   config?: string
   port?: number
-  devToolCli?: string
+  devtool?: string
 }
 
 export interface BaseOptions {
@@ -45,7 +46,7 @@ export interface ServerBaseOptions extends BaseOptions {
   uploadPath?: string
   deployPath?: string
   qrcodePath?: string
-  devToolCli?: string
+  devToolServer?: string
   port?: number
 }
 
@@ -72,12 +73,16 @@ export type LoggerFormat = (content: string) => string
 export type LoggerHeads = Array<string | { content: string, format?: LoggerFormat }>
 export type LoggerMessages = Array<string | { content: string | Error, format?: LoggerFormat }>
 
+export type DevToolCommand = (statsFile: string, killToken: symbol) => Promise<any>
+
 export interface CommandError extends Error {
   code?: number
 }
 
-export type Router = (connection: Connection) => Promise<any>
-export type RouterHandle = (params: any, connection: Connection) => Promise<any>
+export type ServiceCommand = (killToken: symbol) => Promise<void>
+
+export type Router = (connection: Connection, stdout: StdoutService) => Promise<any>
+export type RouterHandle = (params: any, connection: Connection, stdout: StdoutService) => Promise<any>
 
 export interface StandardJSONResponse {
   status?: number
@@ -88,6 +93,7 @@ export interface StandardJSONResponse {
 
 export interface Tunnel extends Connection {
   params: RegExpExecArray,
+  stdout: StdoutService,
   feedback: (content?: StandardJSONResponse) => void
 }
 
@@ -109,6 +115,7 @@ export interface WebSocketTunnel {
   payload: WebSocketPayload
   socket: WebSocket | typeof WebSocketClient
   feedback: (content?: StandardJSONResponse) => void
+  send: (action: string, content?: StandardJSONResponse) => void
 }
 
 // Options

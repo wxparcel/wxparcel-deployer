@@ -50,7 +50,7 @@ export class Stdout extends EventEmitter {
     return service
   }
 
-  public head (content: string, format?: LoggerFormat): this {
+  public head (content: string, format: LoggerFormat = chalk.blue.bold): this {
     this.heads.push({ content, format })
     return this
   }
@@ -108,7 +108,7 @@ export class Stdout extends EventEmitter {
       this.dateime(chalk.gray.bold, true)
     }
 
-    this.name && this.type(this.name, chalk.green.bold)
+    this.name && this.type(this.name, chalk.blue.bold)
     this.type(type, format)
 
     let heads = this.heads.splice(0)

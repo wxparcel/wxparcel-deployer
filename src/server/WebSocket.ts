@@ -62,45 +62,32 @@ export default class Server extends BaseService {
   }
 
   public async login (tunnel: WebSocketTunnel): Promise<void> {
-    let retryTimes = 0
-
-    const execute = () => {
-      const command = (killToken: symbol) => {
-        const qrcode = (qrcode: Buffer) => {
-          if (qrcode.byteLength === 0) {
-            killProcess(killToken)
-            return
-          }
-
-          this.feedback(tunnel.socket as Socket, 'qrcode', { data: qrcode })
+    const command = () => {
+      const sendQrcode = (qrcode: Buffer) => {
+        if (qrcode.byteLength === 0) {
+          return
         }
 
-        return this.devTool.login(qrcode, killToken)
+        tunnel.send('qrcode', { data: qrcode })
       }
 
-      return this.execute(command).catch((error) => {
-        if (retryTimes ++ <= 3) {
-          return execute()
-        }
-
-        if (error.code === 255) {
-          tunnel.feedback({ status: 408, message: 'Login fail' })
-          return Promise.reject(error)
-        }
-
-        let { status, message } = this.resolveCommandError(error)
-        tunnel.feedback({ status, message })
-        return Promise.reject(error)
-      })
+      return this.devTool.login(sendQrcode)
     }
 
-    execute().then(() => tunnel.feedback())
+    const catchError = (error) => {
+      const { status, message } = this.resolveCommandError(error)
+      tunnel.feedback({ status, message })
+      return Promise.reject(error)
+    }
+
+    return this.execute(command).catch(catchError)
   }
 
   public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>): void {
     const action = async (socket: Socket, action: string, payload: WebSocketPayload): Promise<any> => {
+      const send = this.feedback.bind(this, socket)
       const feedback = this.feedback.bind(this, socket, action)
-      return listener({ socket, payload, feedback })
+      return listener({ socket, payload, send, feedback })
     }
 
     this.events.push({ type, action })

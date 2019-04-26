@@ -1,6 +1,6 @@
 import http = require('http')
+import shortid = require('shortid')
 import pathToRegexp = require('path-to-regexp')
-import chalk from 'chalk'
 import Connection from './Connection'
 import StdoutServ, { Stdout } from '../services/stdout'
 
@@ -8,7 +8,6 @@ import { Server as HttpServer, IncomingMessage, ServerResponse } from 'http'
 import { Router, RouterHandle } from '../typings'
 
 export default class Server {
-  private stdout: Stdout
   private routes: Array<Router>
   private server: HttpServer
 
@@ -19,7 +18,6 @@ export default class Server {
   constructor () {
     this.routes = []
     this.server = http.createServer(this.connect.bind(this))
-    this.stdout = StdoutServ.born()
   }
 
   public listen (port: number, hostname?: string, backlog?: number): Promise<void> {
@@ -37,7 +35,7 @@ export default class Server {
     methods = methods || 'GET'
     methods = Array.isArray(methods) ? methods : [methods]
 
-    const router: Router = (connection: Connection): Promise<Boolean> => {
+    const router: Router = (connection: Connection, stdout: Stdout): Promise<Boolean> => {
       const { request } = connection
       const url = request.url
       const regexp = pathToRegexp(route)
@@ -47,17 +45,15 @@ export default class Server {
         return Promise.resolve(false)
       }
 
-      this.stdout.head('HIT', chalk.green.bold).write(url).write(route)
+      stdout.head('HIT').write(url).log(route)
 
       const handleSuccess = () => {
-        this.stdout.ok()
-
         connection.end()
         return true
       }
 
       const handleError = (error) => {
-        this.stdout.error(error)
+        stdout.write(url).error(error)
 
         connection.end({ status: 500, message: error.message })
         return Promise.reject(error)
@@ -66,7 +62,7 @@ export default class Server {
       connection.setMethods(methods as Array<string>)
       connection.setCros()
 
-      return handle(params, connection).then(handleSuccess).catch(handleError)
+      return handle(params, connection, stdout).then(handleSuccess).catch(handleError)
     }
 
     this.routes.push(router)
@@ -78,6 +74,10 @@ export default class Server {
       return Promise.resolve()
     }
 
+    const stdout = StdoutServ.born(shortid())
+    const method = request.method.toUpperCase()
+    stdout.head(method).log(request.url)
+
     const handleSuccess = (hit: boolean) => {
       if (hit === false) {
         connection.setStatus(404)
@@ -87,20 +87,19 @@ export default class Server {
         connection.end({ message: 'ok' })
       }
 
-      const method = request.method.toUpperCase()
-      this.stdout.head(method, chalk.cyan.bold).write(connection.status + '').info(request.url)
-
       connection.destroy()
+      stdout.destory()
     }
 
     const handleError = (error) => {
       connection.end({ status: 500, message: error.message })
       connection.destroy()
+      stdout.destory()
     }
 
     let exec = this.waterfall(this.routes)
     let connection = new Connection(request, response)
-    return exec(connection).then(handleSuccess).catch(handleError)
+    return exec(connection, stdout).then(handleSuccess).catch(handleError)
   }
 
   public close (): void {
@@ -114,18 +113,18 @@ export default class Server {
   private waterfall (middlewares: Array<(...args) => Promise<any>>) {
     middlewares = [].concat(middlewares)
 
-    return function waterfall (connection: Connection): Promise<boolean> {
+    return function waterfall (...args): Promise<boolean> {
       if (middlewares.length === 0) {
         return Promise.resolve(false)
       }
 
       let middleware = middlewares.shift()
-      return middleware(connection).then((isBreak: boolean) => {
+      return middleware(...args).then((isBreak: boolean) => {
         if (isBreak === true) {
           return Promise.resolve(true)
         }
 
-        return waterfall(connection)
+        return waterfall(...args)
       })
     }
   }
@@ -133,10 +132,8 @@ export default class Server {
   public destroy () {
     this.routes.splice(0)
     this.server.close()
-    this.stdout.destory()
 
     this.routes = undefined
     this.server = undefined
-    this.stdout = undefined
   }
 }

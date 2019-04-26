@@ -8,7 +8,7 @@ import BaseService from '../libs/Service'
 import Connection from '../libs/Connection'
 import OptionManager from './OptionManager'
 import Queue from '../services/queue'
-import StdoutSrv from '../services/stdout'
+import StdoutSrv, { Stdout } from '../services/stdout'
 import Aider from './Aider'
 import { ensureDirs, unzip, removeFiles } from '../share/fns'
 
@@ -50,10 +50,8 @@ export default class Server extends BaseService {
   }
 
   public async upload (tunnel: Tunnel): Promise<void> {
-    const stdout = StdoutSrv.born('UPLOAD')
-
     if (Queue.idle === false) {
-      stdout.log('wait for other commands')
+      tunnel.stdout.log('wait for other commands')
       await Queue.waitForIdle()
     }
 
@@ -61,17 +59,17 @@ export default class Server extends BaseService {
     await ensureDirs(uploadPath, deployPath)
 
     const requestData = await this.extract(tunnel.request)
-    stdout.ok('upload to server completed')
+    tunnel.stdout.log('upload to server completed')
 
     const { file: uploadFile, appid, version, message } = requestData
     const projFolder = path.join(deployPath, appid)
 
-    stdout.log(`unzip file ${chalk.bold(path.basename(uploadFile))} to ${chalk.bold(path.basename(projFolder))}`)
+    tunnel.stdout.log(`unzip file ${chalk.bold(path.basename(uploadFile))} to ${chalk.bold(path.basename(projFolder))}`)
     await Promise.all(await unzip(uploadFile, projFolder))
 
-    const command = (killToken: symbol) => {
-      stdout.log('start deploy to wechat server')
-      return this.devTool.upload(projFolder, version, message, killToken)
+    const command = () => {
+      tunnel.stdout.log('start deploy to wechat server')
+      return this.devTool.upload(projFolder, version, message)
     }
 
     const catchError = (error: CommandError) => {
@@ -84,12 +82,12 @@ export default class Server extends BaseService {
     await this.execute(command).catch(catchError)
     await removeFiles(uploadFile, projFolder)
 
-    stdout.ok('deploy completed')
+    tunnel.stdout.log('deploy completed')
     tunnel.feedback({ message: 'deploy completed' })
   }
 
   public async login (tunnel: Tunnel): Promise<void> {
-    const command = (killToken: symbol): Promise<any> => new Promise((resolve) => {
+    const command = (): Promise<any> => new Promise((resolve) => {
       const feedbackQrCode = (qrcode: Buffer) => {
         tunnel.feedback({ data: qrcode })
         resolve()
@@ -104,7 +102,7 @@ export default class Server extends BaseService {
         return Promise.reject(error)
       }
 
-      return this.devTool.login(feedbackQrCode, killToken).then(handleSuccess).catch(catchError)
+      return this.devTool.login(feedbackQrCode).then(handleSuccess).catch(catchError)
     })
 
     await this.execute(command)
@@ -138,9 +136,10 @@ export default class Server extends BaseService {
   }
 
   public route (methods: string | Array<string>, path: string, handle: (tunnel: Tunnel) => Promise<void>) {
-    const router = (params: RegExpExecArray, connection: Connection) => {
+    const router = (params: RegExpExecArray, connection: Connection, stdout: Stdout) => {
       let tunnel = connection as Tunnel
       tunnel.params = params
+      tunnel.stdout = stdout
       tunnel.feedback = this.feedback.bind(this, connection)
 
       return handle(tunnel)
