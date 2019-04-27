@@ -29,17 +29,10 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
   stdout.clear()
   stdout.log(`start upload ${chalk.bold(folder)}`)
 
-  // await client.upload(folder, version, message, '/upload').catch((error) => {
-  //   stdout.error(error)
-  //   process.exit(3)
-  // })
-
-  await Promise.all(new Array(4).fill('').map(() => {
-    return client.upload(folder, version, message, '/upload').catch((error) => {
-      stdout.error(error)
-      process.exit(3)
-    })
-  }))
+  await client.upload(folder, version, message, '/upload').catch((error) => {
+    stdout.error(error)
+    process.exit(3)
+  })
 
   stdout.ok(`project ${chalk.bold(folder)} deploy completed`)
 }
