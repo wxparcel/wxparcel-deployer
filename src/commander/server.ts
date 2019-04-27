@@ -94,7 +94,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
   console.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
   console.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
   console.log(`DevTool: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
-  console.log(chalk.magenta('deploy server is running, please make sure wx devtool has been logined.'))
+  console.log(chalk.magenta('server is running.'))
 
   let handleProcessSigint = process.exit.bind(process)
   let handleProcessExit = () => {
