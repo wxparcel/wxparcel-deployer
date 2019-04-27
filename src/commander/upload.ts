@@ -34,7 +34,7 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
     process.exit(3)
   })
 
-  stdout.ok(`project ${chalk.bold(folder)} deploy completed`)
+  stdout.ok('upload completed')
 }
 
 program

@@ -15,7 +15,6 @@ import { ensureDirs, unzip, removeFiles } from '../share/fns'
 
 import { IncomingMessage } from 'http'
 import { CommandError, StandardJSONResponse, Tunnel } from '../typings'
-import shortid = require('shortid')
 
 export default class Server extends BaseService {
   public options: OptionManager
@@ -77,15 +76,11 @@ export default class Server extends BaseService {
       })
     }
 
-    if (Queue.idle === false) {
-      tunnel.stdout.log('wait for other commands')
-    }
+    this.execute(command).catch(catchError).then(() => {
+      return removeFiles(uploadFile, projFolder)
+    })
 
-    await this.execute(command).catch(catchError)
-    await removeFiles(uploadFile, projFolder)
-
-    tunnel.stdout.log('deploy completed')
-    tunnel.feedback({ message: 'deploy completed' })
+    tunnel.feedback({ message: 'push deploy task success' })
   }
 
   public login (tunnel: Tunnel): Promise<void> {
