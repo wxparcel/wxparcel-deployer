@@ -27,6 +27,8 @@ export interface ServerCLIOptions {
   config?: string
   port?: number
   devtool?: string
+  devtoolCli?: string
+  devtoolIde?: string
 }
 
 export interface BaseOptions {

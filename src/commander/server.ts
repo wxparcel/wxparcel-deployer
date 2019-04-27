@@ -55,7 +55,8 @@ export const server = async (options: ServerCLIOptions = {}) => {
   }
 
   if (!options.devtool) {
-    let port = await startDevtoolAndGetPort()
+    const { devtoolCli, devtoolIde } = options
+    const port = await startDevtoolAndGetPort(devtoolCli, devtoolIde)
     options.devtool = `http://127.0.0.1:${port}`
   }
 
@@ -109,4 +110,6 @@ program
 .option('-c, --config <config>', 'settting config file')
 .option('-p, --port <port>', 'setting server port, default use idle port')
 .option('-d, --devtool <devtool>', 'setting devtool server')
+.option('--devtool-cli <devtool-cli>', 'setting devtool cli')
+.option('--devtool-ide <devtool-ide>', 'setting devtool ide')
 .action(server)
