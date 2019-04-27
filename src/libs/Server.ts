@@ -74,7 +74,8 @@ export default class Server {
       return Promise.resolve()
     }
 
-    const stdout = StdoutServ.born(shortid())
+    const connection = new Connection(request, response)
+    const stdout = StdoutServ.born(connection.id)
     const method = request.method.toUpperCase()
     stdout.head(method).log(request.url)
 
@@ -98,7 +99,6 @@ export default class Server {
     }
 
     let exec = this.waterfall(this.routes)
-    let connection = new Connection(request, response)
     return exec(connection, stdout).then(handleSuccess).catch(handleError)
   }
 

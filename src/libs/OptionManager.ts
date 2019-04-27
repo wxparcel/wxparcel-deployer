@@ -5,7 +5,6 @@ import ip = require('ip')
 import { LoggerMethods, BaseOptions } from '../typings'
 
 export default class OptionManager {
-  public uid: string
   public ip: string
   public logMethod: string | Array<string>
   public rootPath: string
@@ -16,7 +15,6 @@ export default class OptionManager {
   public isDevelop: boolean
 
   constructor (options: BaseOptions) {
-    this.uid = options.uid || shortid.generate()
     this.ip = ip.address()
     this.rootPath = process.cwd()
     this.tempPath = options.tempPath && path.isAbsolute(options.tempPath) ? options.tempPath : path.join(this.rootPath, options.tempPath || '.runtime')

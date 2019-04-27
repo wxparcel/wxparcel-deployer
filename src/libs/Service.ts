@@ -8,9 +8,11 @@ export default class Service {
     return Queue.size === 0
   }
 
-  public async execute (command: ServiceCommand, killToken?: symbol): Promise<void> {
+  public execute (command: ServiceCommand, killToken?: symbol): Promise<void> {
     if (Queue.idle === false) {
-      await Queue.waitForIdle()
+      const promise = Queue.waitForIdle().then(() => command(killToken))
+      Queue.push(promise)
+      return promise
     }
 
     const promise = command(killToken)

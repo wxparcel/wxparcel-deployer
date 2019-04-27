@@ -1,4 +1,5 @@
 import path = require('path')
+import fs = require('fs-extra')
 import forEach = require('lodash/forEach')
 import { IncomingForm } from 'formidable'
 import chalk from 'chalk'
@@ -14,6 +15,7 @@ import { ensureDirs, unzip, removeFiles } from '../share/fns'
 
 import { IncomingMessage } from 'http'
 import { CommandError, StandardJSONResponse, Tunnel } from '../typings'
+import shortid = require('shortid')
 
 export default class Server extends BaseService {
   public options: OptionManager
@@ -57,13 +59,13 @@ export default class Server extends BaseService {
     const requestData = await this.extract(tunnel.request)
     tunnel.stdout.log('upload to server completed')
 
-    const { file: uploadFile, appid, version, message } = requestData
-    const projFolder = path.join(deployPath, appid)
+    const { file: uploadFile, version, message } = requestData
+    const projFolder = path.join(deployPath, `${tunnel.id}_${Math.floor(Date.now() / 1000)}`)
 
     tunnel.stdout.log(`unzip file ${chalk.bold(path.basename(uploadFile))} to ${chalk.bold(path.basename(projFolder))}`)
     await Promise.all(await unzip(uploadFile, projFolder))
 
-    const command = () => {
+    const command = async () => {
       tunnel.stdout.log('start deploy to wechat server')
       return this.devTool.upload(projFolder, version, message)
     }

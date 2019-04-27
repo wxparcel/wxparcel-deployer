@@ -1,7 +1,9 @@
 import { IncomingMessage, ServerResponse } from 'http'
+import shortid = require('shortid')
 import { StandardJSONResponse } from '../typings'
 
 export default class Connection {
+  public id: string
   public request: IncomingMessage
   public response: ServerResponse
   public head: { [key: string]: string }
@@ -12,6 +14,7 @@ export default class Connection {
     this.request = request
     this.response = response
 
+    this.id = shortid()
     this.head = {}
     this.status = 200
     this.ended = false
@@ -59,6 +62,7 @@ export default class Connection {
   public destroy () {
     this.request = undefined
     this.response = undefined
+    this.id = undefined
     this.head = undefined
     this.status = undefined
   }

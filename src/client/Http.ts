@@ -102,7 +102,7 @@ export default class Client extends BaseClient {
     }
 
     return new Promise(async (resolve, reject) => {
-      const { uid, maxFileSize } = this.options
+      const { maxFileSize } = this.options
       const { size } = fs.statSync(file)
       if (size > maxFileSize) {
         return Promise.reject(new Error(`File size is over ${unitSize(maxFileSize)}`))
@@ -113,7 +113,7 @@ export default class Client extends BaseClient {
       stream.once('end', () => stream.close())
 
       const formData = new FormData()
-      forEach(Object.assign({ uid }, data), (value, name) => formData.append(name, value))
+      forEach(data, (value, name) => name && value && formData.append(name, value))
       formData.append('file', stream)
 
       const catchError = (error) => {

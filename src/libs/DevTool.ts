@@ -2,6 +2,7 @@ import fs = require('fs-extra')
 import path = require('path')
 import isPlainObject = require('lodash/isPlainObject')
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
+import shortid = require('shortid')
 import OptionManager from '../server/OptionManager'
 import { findPages, validProject } from '../share/wx'
 import { DevToolQRCodeHandle, CommandError, DevToolCommand } from '../typings'
@@ -64,8 +65,8 @@ export default class DevTool {
   }
 
   public login (qrcodeCallback: DevToolQRCodeHandle): Promise<any> {
-    const { uid, qrcodePath } = this.options
-    const qrcodeFile = path.join(qrcodePath, uid)
+    const { qrcodePath } = this.options
+    const qrcodeFile = path.join(qrcodePath, shortid())
 
     fs.ensureFileSync(qrcodeFile)
 
@@ -116,6 +117,11 @@ export default class DevTool {
 
   public upload (folder: string, version: string, description: string): Promise<any> {
     const command: DevToolCommand = (statsFile) => {
+      const valid = validProject(folder)
+      if (valid !== true) {
+        return Promise.reject(valid)
+      }
+
       const params = {
         projectpath: encodeURIComponent(folder),
         version: version,
@@ -134,9 +140,9 @@ export default class DevTool {
   }
 
   private execute (command: DevToolCommand, killToken?: symbol) {
-    const { tempPath, uid } = this.options
+    const { tempPath } = this.options
 
-    let statsFile = path.join(tempPath, `./stats/${uid}.json`)
+    let statsFile = path.join(tempPath, `./stats/${shortid()}.json`)
     fs.ensureFileSync(statsFile)
 
     /**

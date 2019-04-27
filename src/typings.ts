@@ -30,7 +30,6 @@ export interface ServerCLIOptions {
 }
 
 export interface BaseOptions {
-  uid?: string
   tempPath?: string
   maxFileSize?: number
   logMethod?: string | Array<string>
