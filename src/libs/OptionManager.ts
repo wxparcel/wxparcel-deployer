@@ -1,6 +1,4 @@
-import os = require('os')
 import path = require('path')
-import shortid = require('shortid')
 import ip = require('ip')
 import { LoggerMethods, BaseOptions } from '../typings'
 
@@ -10,8 +8,7 @@ export default class OptionManager {
   public rootPath: string
   public tempPath: string
   public maxFileSize: number
-  public isOSX: boolean
-  public isWin: boolean
+
   public isDevelop: boolean
 
   constructor (options: BaseOptions) {
@@ -20,8 +17,6 @@ export default class OptionManager {
     this.tempPath = options.tempPath && path.isAbsolute(options.tempPath) ? options.tempPath : path.join(this.rootPath, options.tempPath || '.runtime')
     this.logMethod = options.logMethod || LoggerMethods.CONSOLE
     this.maxFileSize = 1024 * 1024 * 8
-    this.isOSX = 'darwin' === os.platform()
-    this.isWin = 'win32' === os.platform()
     this.isDevelop = process.argv.findIndex((argv) => argv === '--develop') !== -1
 
     this.configure(options)

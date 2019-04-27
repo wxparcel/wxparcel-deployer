@@ -1,4 +1,6 @@
+import os = require('os')
 import fs = require('fs-extra')
+import path = require('path')
 import ip = require('ip')
 import program = require('commander')
 import portscanner = require('portscanner')
@@ -7,20 +9,39 @@ import Logger from '../libs/Logger'
 import StdoutServ from '../services/stdout'
 import OptionManager from '../server/OptionManager'
 import Server from '../server'
+import { spawnPromisify } from '../share/fns'
 import * as pkg from '../../package.json'
-
 import { ServerCLIOptions } from '../typings'
+
+const startDevtoolAndGetPort = (cli?: string, ide?: string) => {
+  const isOSX = 'darwin' === os.platform()
+
+  if (!cli) {
+    if (isOSX) {
+      cli = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
+    }
+  }
+
+  return spawnPromisify(cli).then(() => {
+    if (ide) {
+      return fs.readFile(ide)
+    }
+
+    if (isOSX) {
+      let relative = '/Library/Application Support/微信web开发者工具/Default/.ide'
+      ide = path.join(os.homedir(), relative)
+      return fs.readFile(ide)
+    }
+
+    return Promise.reject(new Error('ide file not found'))
+  })
+}
 
 export const server = async (options: ServerCLIOptions = {}) => {
   let { config: configFile, port } = options
 
   if (!port) {
-    port = await portscanner.findAPortNotInUse(3000, 8000, ip.address()).catch((error) => {
-      StdoutServ.error(error)
-      process.exit(3)
-
-      return Promise.reject(error)
-    })
+    port = await portscanner.findAPortNotInUse(3000, 8000, ip.address())
   }
 
   let defaultOptions: any = {}
@@ -33,14 +54,19 @@ export const server = async (options: ServerCLIOptions = {}) => {
     defaultOptions = defaultOptions.default || defaultOptions
   }
 
+  if (!options.devtool) {
+    let port = await startDevtoolAndGetPort()
+    options.devtool = `http://127.0.0.1:${port}`
+  }
+
   const globalOptions = new OptionManager({
     ...defaultOptions,
-    devToolServer: options.devtool || 'http://127.0.0.1:28337',
+    devToolServer: options.devtool,
     port: port
   })
 
   if (!globalOptions.devToolServer) {
-    throw new Error('please set devtool server')
+    throw new Error('devtool server is empty or invalid')
   }
 
   const method = globalOptions.logMethod
@@ -55,14 +81,12 @@ export const server = async (options: ServerCLIOptions = {}) => {
     return Promise.reject(error)
   })
 
-  const log = (message) => console.log(message)
-
   StdoutServ.clear()
-  log(chalk.gray.bold('WXParcel Server'))
-  log(`Version: ${chalk.cyan.bold(pkg.version)}`)
-  log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
-  log(`DevTool: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
-  log(chalk.magenta('deploy server is running, please make sure wx devtool has been logined.'))
+  console.log(chalk.gray.bold('WXParcel Server'))
+  console.log(`Version: ${chalk.cyan.bold(pkg.version)}`)
+  console.log(`Server: ${chalk.cyan.bold(`${globalOptions.ip}:${port}`)}`)
+  console.log(`DevTool: ${chalk.cyan.bold(globalOptions.devToolServer)}`)
+  console.log(chalk.magenta('deploy server is running, please make sure wx devtool has been logined.'))
 
   let handleProcessSigint = process.exit.bind(process)
   let handleProcessExit = () => {

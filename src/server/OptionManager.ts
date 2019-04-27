@@ -28,7 +28,7 @@ export default class OptionManager extends BaseOptionManager {
       this.port = options.port
     }
 
-    if (options.hasOwnProperty('devToolServer')) {
+    if (options.hasOwnProperty('devToolServer') && /^https?:\/\//.test(options.devToolServer)) {
       this.devToolServer = options.devToolServer
     }
   }
