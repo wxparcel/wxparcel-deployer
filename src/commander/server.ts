@@ -15,6 +15,7 @@ import { ServerCLIOptions } from '../typings'
 
 const startDevtoolAndGetPort = (cli?: string, ide?: string) => {
   const isOSX = 'darwin' === os.platform()
+  const isWin = 'win32' === os.platform()
 
   if (!cli) {
     if (isOSX) {
@@ -29,6 +30,12 @@ const startDevtoolAndGetPort = (cli?: string, ide?: string) => {
 
     if (isOSX) {
       let relative = '/Library/Application Support/微信web开发者工具/Default/.ide'
+      ide = path.join(os.homedir(), relative)
+      return fs.readFile(ide)
+    }
+
+    if (isWin) {
+      let relative = '/AppData/Local/微信web开发者工具/User Data/Default/.ide'
       ide = path.join(os.homedir(), relative)
       return fs.readFile(ide)
     }
