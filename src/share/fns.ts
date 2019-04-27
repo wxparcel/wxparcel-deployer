@@ -3,7 +3,10 @@ import path = require('path')
 import { spawn, SpawnOptions } from 'child_process'
 import Zip = require('jszip')
 import { promisify } from 'util'
-import { Stdout, ChildProcessMap, ClientZipSource } from '../typings'
+import {
+  ChildProcessStdout, ChildProcessMap,
+  ClientZipSource
+} from '../typings'
 
 // size
 // -------------
@@ -100,7 +103,7 @@ export const zip = (file: string, relativeTo: string, zip: Zip = new Zip()): Zip
 
 const processes: Array<ChildProcessMap> = []
 
-export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol): Promise<any> => {
+export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: ChildProcessStdout, killToken?: Symbol): Promise<any> => {
   return new Promise((resolve, reject) => {
     let cp = spawn(cli, params || [], options || {})
 

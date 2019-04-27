@@ -6,17 +6,17 @@ import forEach = require('lodash/forEach')
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import FormData = require('form-data')
 import terminalImage = require('terminal-image')
-import ClientOptions from './OptionManager'
+import OptionManager from './OptionManager'
 import BaseClient from '../libs/Client'
 import stdoutServ from '../services/stdout'
 import { unitSize } from '../share/fns'
 import { CommandError } from '../typings'
 
 export default class Client extends BaseClient {
-  public options: ClientOptions
+  public options: OptionManager
   public request: AxiosInstance
 
-  constructor (options: ClientOptions) {
+  constructor (options: OptionManager) {
     super()
 
     this.options = options
@@ -59,6 +59,35 @@ export default class Client extends BaseClient {
   public async status () {
     let response = await this.request.get('status')
     return response
+  }
+
+  public async login (): Promise<any> {
+    const response = await this.request.get('/login')
+    const content = response.data || {}
+    const { type, data } = content.data
+
+    if (type === 'Buffer') {
+      let qrcode = Buffer.from(data, 'base64')
+      let regexp = /^data:image\/([\w+]+);base64,([\s\S]+)/
+      let base64 = qrcode.toString()
+      let match = regexp.exec(base64)
+
+      if (match) {
+        let content = match[2]
+        let buffer = Buffer.from(content, 'base64')
+        let image = await terminalImage.buffer(buffer)
+        return image
+      }
+
+      return Promise.reject(new Error('Qrcode is invalid'))
+    }
+
+    return Promise.reject(new Error('Qrcode is invalid'))
+  }
+
+  public async access (): Promise<any> {
+    const response = await this.request.get('/access')
+    return response.data
   }
 
   public async upload (folder: string, version: string, message: string, url: string = '/upload'): Promise<any> {
@@ -139,34 +168,5 @@ export default class Client extends BaseClient {
       const result = await this.request.post(url, formData, config).catch(catchError)
       resolve(result)
     })
-  }
-
-  public async login (): Promise<any> {
-    const response = await this.request.get('/login')
-    const content = response.data || {}
-    const { type, data } = content.data
-
-    if (type === 'Buffer') {
-      let qrcode = Buffer.from(data, 'base64')
-      let regexp = /^data:image\/([\w+]+);base64,([\s\S]+)/
-      let base64 = qrcode.toString()
-      let match = regexp.exec(base64)
-
-      if (match) {
-        let content = match[2]
-        let buffer = Buffer.from(content, 'base64')
-        let image = await terminalImage.buffer(buffer)
-        return image
-      }
-
-      return Promise.reject(new Error('Qrcode is invalid'))
-    }
-
-    return Promise.reject(new Error('Qrcode is invalid'))
-  }
-
-  public async access (): Promise<any> {
-    const response = await this.request.get('/access')
-    return response.data
   }
 }

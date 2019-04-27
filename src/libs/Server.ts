@@ -1,5 +1,4 @@
 import http = require('http')
-import shortid = require('shortid')
 import pathToRegexp = require('path-to-regexp')
 import Connection from './Connection'
 import StdoutServ, { Stdout } from '../services/stdout'

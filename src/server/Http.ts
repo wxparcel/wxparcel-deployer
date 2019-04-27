@@ -1,5 +1,4 @@
 import path = require('path')
-import fs = require('fs-extra')
 import forEach = require('lodash/forEach')
 import { IncomingForm } from 'formidable'
 import chalk from 'chalk'

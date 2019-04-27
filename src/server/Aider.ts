@@ -1,9 +1,12 @@
-import SocketIO = require('socket.io-client')
+import SocketIO = require('socket.io')
+import SocketIOClient = require('socket.io-client')
+import SocketIOStream = require('socket.io-stream')
 import OptionManager from './OptionManager'
 import DevTool from '../libs/DevTool'
 import BaseService from './WebSocket'
+import StdoutServ from '../services/stdout'
 
-import { Socket } from 'socket.io-client'
+import { ReadStream } from 'fs-extra'
 import {
   StandardJSONResponse,
   WebSocketEevent, WebSocketMessage
@@ -14,7 +17,7 @@ export default class Aider extends BaseService {
   public options: OptionManager
   public devTool: DevTool
   public events: Array<WebSocketEevent>
-  public socket: typeof Socket
+  public socket: typeof SocketIOClient.Socket
 
   constructor (id: string, options: OptionManager, devTool: DevTool) {
     super(options, devTool)
@@ -34,22 +37,43 @@ export default class Aider extends BaseService {
         reconnectionAttempts: 0
       }
 
-      this.socket = SocketIO(url, params)
+      this.socket = SocketIOClient(url, params)
 
       this.listen('status', this.status.bind(this))
       this.listen('login', this.login.bind(this))
+      this.listen('upload', this.upload.bind(this), true)
 
-      const onMessage = (message: WebSocketMessage) => {
-        this.events.forEach((event) => {
+      const connection = (socket: SocketIO.Socket) => {
+        const stdout = StdoutServ.born(socket.id)
+        const onMessage = (message: any, stream?: ReadStream) => {
           const { action, payload } = message
-          if (event.type === action) {
-            event.action(this.socket, action, payload)
-          }
-        })
-      }
 
-      const connection = () => {
-        this.socket.on('deploy', onMessage)
+          const normalEvents = []
+          const streamEvents = []
+
+          this.events.forEach((event) => {
+            event.stream ? streamEvents.push(event) : normalEvents.push(event)
+          })
+
+          if (stream) {
+            streamEvents.forEach((event) => {
+              if (event.type === action) {
+                payload.stream = stream
+                event.action(socket, action, payload, stdout)
+              }
+            })
+          } else {
+            normalEvents.forEach((event) => {
+              if (event.type === action) {
+                event.action(socket, action, payload, stdout)
+              }
+            })
+          }
+        }
+
+        socket.on('deploy', onMessage)
+        SocketIOStream(socket).on('deploy', onMessage)
+
         resolve()
       }
 

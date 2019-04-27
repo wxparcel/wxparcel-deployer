@@ -4,6 +4,7 @@ import program = require('commander')
 import chalk from 'chalk'
 import ClientOptions from '../client/OptionManager'
 import HttpClient from '../client/Http'
+import WebSocketClient from '../client/WebSocket'
 import { Stdout } from '../services/stdout'
 import { wrapClientAction } from '../share/command'
 import { ClientCLIOptions } from '../typings'
@@ -24,12 +25,20 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
   }
 
   const folder = options.folder || globalOptions.rootPath
-  const client = new HttpClient(globalOptions)
+  const client = (() => {
+    if (options.socket) {
+      let client = new WebSocketClient(globalOptions)
+      client.connect(globalOptions.deployServer)
+      return client
+    }
+
+    return new HttpClient(globalOptions)
+  })()
 
   stdout.clear()
   stdout.log(`start upload ${chalk.bold(folder)}`)
 
-  await client.upload(folder, version, message, '/upload').catch((error) => {
+  await client.upload(folder, version, message).catch((error) => {
     stdout.error(error)
     process.exit(3)
   })
@@ -45,4 +54,5 @@ program
 .option('-d, --message <message>', 'setting upload message')
 .option('-c, --config <config>', 'settting config file')
 .option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
+.option('--socket', 'setting websocket mode')
 .action(wrapClientAction(upload))

@@ -1,15 +1,14 @@
-import { Socket as WebSocket } from 'socket.io'
-import { Socket as WebSocketClient } from 'socket.io-client'
+import { Socket as SocketIOSocket } from 'socket.io'
+import { Socket as SocketIOClientSocket } from 'socket.io-client'
+import Connection from './libs/Connection'
 import { Stdout as StdoutService } from './services/stdout'
 
-export type Stdout = (data: Buffer, type?: string) => void
+export type ChildProcessStdout = (data: Buffer, type?: string) => void
 
 export interface ChildProcessMap {
   token: Symbol
   kill: () => void
 }
-
-import Connection from './libs/Connection'
 
 export interface StdoutOptions {
   autoDatetime?: boolean
@@ -21,6 +20,7 @@ export interface ClientCLIOptions {
   message?: string
   folder?: string
   server?: string
+  socket?: boolean
 }
 
 export interface ServerCLIOptions {
@@ -109,12 +109,14 @@ export interface WebSocketPayload {
 
 export interface WebSocketEevent {
   type: string
-  action: (socket: WebSocket | typeof WebSocketClient, action: string, payload: WebSocketPayload) => Promise<any>
+  action: (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, payload: WebSocketPayload, stdout: StdoutService) => Promise<any>
+  stream: boolean
 }
 
 export interface WebSocketTunnel {
   payload: WebSocketPayload
-  socket: WebSocket | typeof WebSocketClient
+  stdout: StdoutService,
+  socket: SocketIOSocket | typeof SocketIOClientSocket
   feedback: (content?: StandardJSONResponse) => void
   send: (action: string, content?: StandardJSONResponse) => void
 }

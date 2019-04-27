@@ -64,7 +64,7 @@ export const server = async (options: ServerCLIOptions = {}) => {
   if (!options.devtool) {
     const { devtoolCli, devtoolIde } = options
     const port = await startDevtoolAndGetPort(devtoolCli, devtoolIde)
-    options.devtool = `http://127.0.0.1:${port}`
+    options.devtool = `http://${ip.address()}:${port}`
   }
 
   const globalOptions = new OptionManager({
