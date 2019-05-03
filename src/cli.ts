@@ -1,5 +1,6 @@
 import program = require('commander')
 import pkg = require('../package.json')
+import './commander/status'
 import './commander/server'
 import './commander/upload'
 import './commander/login'

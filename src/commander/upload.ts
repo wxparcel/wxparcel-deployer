@@ -24,26 +24,29 @@ const upload = async (options: ClientCLIOptions = {}, globalOptions: ClientOptio
     throw new Error('Version is not defined, please use option `--version`')
   }
 
-  const folder = options.folder || globalOptions.rootPath
-  const client = (() => {
-    if (options.socket) {
-      let client = new WebSocketClient(globalOptions)
-      client.connect(globalOptions.deployServer)
-      return client
-    }
-
-    return new HttpClient(globalOptions)
-  })()
-
-  stdout.clear()
-  stdout.log(`start upload ${chalk.bold(folder)}`)
-
-  await client.upload(folder, version, message).catch((error) => {
+  const catchError = (error) => {
     stdout.error(error)
     process.exit(3)
-  })
+  }
 
-  stdout.ok('upload completed')
+  const folder = options.folder || globalOptions.rootPath
+  if (options.socket) {
+    let client = new WebSocketClient(globalOptions)
+    client.connect(globalOptions.deployServer)
+
+    stdout.log(`start upload ${chalk.bold(folder)}`)
+    const response = await client.upload(folder, version, message).catch(catchError)
+    stdout.ok(response.message)
+
+    client.destroy()
+
+  } else {
+    const client = new HttpClient(globalOptions)
+
+    stdout.log(`start upload ${chalk.bold(folder)}`)
+    const response = await client.upload(folder, version, message).catch(catchError)
+    stdout.ok(response.message)
+  }
 }
 
 program

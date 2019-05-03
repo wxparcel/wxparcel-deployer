@@ -75,11 +75,11 @@ export default class Server extends BaseService {
       })
     }
 
-    this.execute(command).catch(catchError).then(() => {
-      return removeFiles(uploadFile, projFolder)
-    })
+    await this.execute(command).catch(catchError)
+    await removeFiles(uploadFile, projFolder)
 
-    tunnel.feedback({ message: 'push deploy task success' })
+    tunnel.feedback({ message: 'deploy complete' })
+    tunnel.stdout.log('deploy complete')
   }
 
   public login (tunnel: Tunnel): Promise<void> {

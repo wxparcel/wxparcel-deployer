@@ -2,11 +2,16 @@ import ip = require('ip')
 import fs = require('fs-extra')
 import path = require('path')
 import SocketIOClient = require('socket.io-client')
-import SocketIOStream = require('socket.io-stream')
 import terminalImage = require('terminal-image')
 import OptionManager from './OptionManager'
 import BaseClient from '../libs/Client'
-import { StandardJSONResponse, CommandError } from '../typings'
+import StreamSocket from '../libs/StreamSocket'
+import { SocketToken, SocketStreamToken } from '../conf/token'
+
+import {
+  StandardJSONResponse, CommandError,
+  WebSocketMessage
+} from '../typings'
 
 export default class Client extends BaseClient {
   public options: OptionManager
@@ -36,30 +41,35 @@ export default class Client extends BaseClient {
     })
   }
 
+  public async status (): Promise<any> {
+    return this.send('status')
+  }
+
   public login (receiveQrcode: (image: string) => any): Promise<any> {
     return new Promise((resolve, reject) => {
-      const qrcode = async (qrcode: Buffer) => {
-        let regexp = /^data:image\/([\w+]+);base64,([\s\S]+)/
-        let base64 = qrcode.toString()
-        let match = regexp.exec(base64)
-
-        if (match) {
-          let content = match[2]
-          let buffer = Buffer.from(content, 'base64')
-          let image = await terminalImage.buffer(buffer)
-          receiveQrcode(image)
+      const qrcode = async (response: StandardJSONResponse) => {
+        if (response.status !== 200) {
+          return reject(new Error(response.message))
         }
 
-        return Promise.reject(new Error('Qrcode is invalid'))
+        const qrcode: Buffer = response.data
+        const regexp = /^data:image\/([\w+]+);base64,([\s\S]+)/
+        const base64 = qrcode.toString()
+        const match = regexp.exec(base64)
+
+        if (match) {
+          const content = match[2]
+          const buffer = Buffer.from(content, 'base64')
+          const image = await terminalImage.buffer(buffer)
+          receiveQrcode(image)
+          return
+        }
+
+        return reject(new Error('Qrcode is invalid'))
       }
 
-      const login = (response: StandardJSONResponse) => {
-        this.resolveResponse(response).then(resolve).catch(reject)
-      }
-
-      this.socket.once('qrcode', qrcode)
-      this.socket.once('login', login)
-      this.socket.send('login')
+      this.once('qrcode', qrcode)
+      this.send('login').then(resolve).catch(reject)
     })
   }
 
@@ -92,7 +102,7 @@ export default class Client extends BaseClient {
       const upload = (response: StandardJSONResponse) => {
         const handleSuccess = () => {
           fs.removeSync(zipFile)
-          resolve()
+          resolve(response)
         }
 
         const catchError = (error: CommandError) => {
@@ -103,15 +113,48 @@ export default class Client extends BaseClient {
         this.resolveResponse(response).then(handleSuccess).catch(catchError)
       }
 
-      this.socket.once('upload', upload)
+      const socket = new StreamSocket(this.socket)
+      const socketStream = socket.createStream()
 
-      const stream = SocketIOStream.createStream()
-      const end = () => stream.close()
-      stream.once('end', end)
+      const action = 'upload'
+      const payload = datas
 
-      SocketIOStream(this.socket).emit('upload', stream, datas)
-      SocketIOStream.createBlobReadStream(zipFile).pipe(stream)
+      this.once('upload', upload)
+      socket.emit(SocketStreamToken, socketStream, { action, payload })
+
+      const readStream = fs.createReadStream(zipFile)
+      readStream.pipe(socketStream)
     })
+  }
+
+  public send (type: string, payload: any = null): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const callback = (response: StandardJSONResponse) => {
+        this.resolveResponse(response).then(resolve, reject)
+      }
+
+      this.emit(type, payload, callback)
+    })
+  }
+
+  public emit (type: string, payload: any = null, callback: (response: StandardJSONResponse) => void) {
+    if (typeof callback === 'function') {
+      this.once(type, callback)
+    }
+
+    this.socket.emit(SocketToken, { action: type, payload })
+  }
+
+  public once (type: string, callback: (response: StandardJSONResponse) => void) {
+    const feedback = (response: WebSocketMessage) => {
+      const { action, payload } = response
+      if (type === action) {
+        callback(payload as StandardJSONResponse)
+        this.socket.off(SocketToken, feedback)
+      }
+    }
+
+    this.socket.on(SocketToken, feedback)
   }
 
   private resolveResponse (response: StandardJSONResponse): Promise<any> {

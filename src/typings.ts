@@ -1,6 +1,7 @@
 import { Socket as SocketIOSocket } from 'socket.io'
 import { Socket as SocketIOClientSocket } from 'socket.io-client'
 import Connection from './libs/Connection'
+import SocketStream from './libs/SocketStream'
 import { Stdout as StdoutService } from './services/stdout'
 
 export type ChildProcessStdout = (data: Buffer, type?: string) => void
@@ -109,12 +110,13 @@ export interface WebSocketPayload {
 
 export interface WebSocketEevent {
   type: string
-  action: (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, payload: WebSocketPayload, stdout: StdoutService) => Promise<any>
+  action: (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, payload: WebSocketPayload, stream: SocketStream, stdout: StdoutService) => Promise<any>
   stream: boolean
 }
 
 export interface WebSocketTunnel {
   payload: WebSocketPayload
+  stream: SocketStream
   stdout: StdoutService,
   socket: SocketIOSocket | typeof SocketIOClientSocket
   feedback: (content?: StandardJSONResponse) => void

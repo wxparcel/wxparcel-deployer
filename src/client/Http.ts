@@ -58,7 +58,7 @@ export default class Client extends BaseClient {
 
   public async status () {
     let response = await this.request.get('status')
-    return response
+    return response.data
   }
 
   public async login (): Promise<any> {

@@ -5,6 +5,7 @@ import OptionManager from './OptionManager'
 import DevTool from '../libs/DevTool'
 import BaseService from './WebSocket'
 import StdoutServ from '../services/stdout'
+import { SocketToken } from '../conf/token'
 
 import { ReadStream } from 'fs-extra'
 import {
@@ -71,8 +72,8 @@ export default class Aider extends BaseService {
           }
         }
 
-        socket.on('deploy', onMessage)
-        SocketIOStream(socket).on('deploy', onMessage)
+        socket.on(SocketToken, onMessage)
+        SocketIOStream(socket).on(SocketToken, onMessage)
 
         resolve()
       }
@@ -95,6 +96,6 @@ export default class Aider extends BaseService {
       payload: this.genStandardResponse(data)
     }
 
-    this.socket.emit('deploy', params)
+    this.socket.emit(SocketToken, params)
   }
 }
