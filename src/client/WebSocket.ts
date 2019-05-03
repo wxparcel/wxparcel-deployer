@@ -1,6 +1,7 @@
 import ip = require('ip')
 import fs = require('fs-extra')
 import path = require('path')
+import shortid = require('shortid')
 import SocketIOClient = require('socket.io-client')
 import terminalImage = require('terminal-image')
 import OptionManager from './OptionManager'
@@ -68,8 +69,9 @@ export default class Client extends BaseClient {
         return reject(new Error('Qrcode is invalid'))
       }
 
-      this.once('qrcode', qrcode)
-      this.send('login').then(resolve).catch(reject)
+      const token = shortid()
+      this.once('qrcode', qrcode, token)
+      this.send('login', null, token).then(resolve).catch(reject)
     })
   }
 
@@ -119,36 +121,34 @@ export default class Client extends BaseClient {
       const action = 'upload'
       const payload = datas
 
-      this.once('upload', upload)
-      socket.emit(SocketStreamToken, socketStream, { action, payload })
+      const token = shortid()
+      this.once('upload', upload, token)
+      socket.emit(SocketStreamToken, socketStream, { action, token, payload })
 
       const readStream = fs.createReadStream(zipFile)
       readStream.pipe(socketStream)
     })
   }
 
-  public send (type: string, payload: any = null): Promise<any> {
+  public send (type: string, payload: any = null, token?: string): Promise<any> {
     return new Promise((resolve, reject) => {
       const callback = (response: StandardJSONResponse) => {
         this.resolveResponse(response).then(resolve, reject)
       }
 
-      this.emit(type, payload, callback)
+      this.emit(type, payload, callback, token)
     })
   }
 
-  public emit (type: string, payload: any = null, callback: (response: StandardJSONResponse) => void) {
-    if (typeof callback === 'function') {
-      this.once(type, callback)
-    }
-
-    this.socket.emit(SocketToken, { action: type, payload })
+  public emit (action: string, payload: any = null, callback: (response: StandardJSONResponse) => void, token: string = shortid()): void {
+    typeof callback === 'function' && this.once(action, callback, token)
+    this.socket.emit(SocketToken, { action, token, payload })
   }
 
-  public once (type: string, callback: (response: StandardJSONResponse) => void) {
+  public once (action: string, callback: (response: StandardJSONResponse) => void, token: string): void {
     const feedback = (response: WebSocketMessage) => {
-      const { action, payload } = response
-      if (type === action) {
+      const { action: feedbackAction, token: feedbackToken, payload } = response
+      if (action === feedbackAction && token === feedbackToken) {
         callback(payload as StandardJSONResponse)
         this.socket.off(SocketToken, feedback)
       }

@@ -100,6 +100,7 @@ export interface Tunnel extends Connection {
 }
 
 export interface WebSocketMessage {
+  token?: string
   action: string
   payload: any
 }
@@ -108,10 +109,15 @@ export interface WebSocketPayload {
   [key: string]: any
 }
 
+export interface WebSocketEeventData {
+  token?: string
+  payload: any
+  stream?: SocketStream
+}
+
 export interface WebSocketEevent {
   type: string
-  action: (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, payload: WebSocketPayload, stream: SocketStream, stdout: StdoutService) => Promise<any>
-  stream: boolean
+  action: (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, data: WebSocketEeventData, stdout: StdoutService) => Promise<any>
 }
 
 export interface WebSocketTunnel {

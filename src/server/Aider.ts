@@ -4,10 +4,10 @@ import SocketIOStream = require('socket.io-stream')
 import OptionManager from './OptionManager'
 import DevTool from '../libs/DevTool'
 import BaseService from './WebSocket'
+import SocketStream from '../libs/SocketStream'
 import StdoutServ from '../services/stdout'
 import { SocketToken } from '../conf/token'
 
-import { ReadStream } from 'fs-extra'
 import {
   StandardJSONResponse,
   WebSocketEevent, WebSocketMessage
@@ -42,34 +42,18 @@ export default class Aider extends BaseService {
 
       this.listen('status', this.status.bind(this))
       this.listen('login', this.login.bind(this))
-      this.listen('upload', this.upload.bind(this), true)
+      this.listen('upload', this.upload.bind(this))
 
       const connection = (socket: SocketIO.Socket) => {
         const stdout = StdoutServ.born(socket.id)
-        const onMessage = (message: any, stream?: ReadStream) => {
-          const { action, payload } = message
 
-          const normalEvents = []
-          const streamEvents = []
-
+        const onMessage = (message: any, stream?: SocketStream) => {
+          let { action, token, payload } = message
           this.events.forEach((event) => {
-            event.stream ? streamEvents.push(event) : normalEvents.push(event)
+            if (event.type === action) {
+              event.action(socket, action, { token, payload, stream }, stdout)
+            }
           })
-
-          if (stream) {
-            streamEvents.forEach((event) => {
-              if (event.type === action) {
-                payload.stream = stream
-                event.action(socket, action, payload, stdout)
-              }
-            })
-          } else {
-            normalEvents.forEach((event) => {
-              if (event.type === action) {
-                event.action(socket, action, payload, stdout)
-              }
-            })
-          }
         }
 
         socket.on(SocketToken, onMessage)

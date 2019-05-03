@@ -16,7 +16,7 @@ import { Socket as SocketIOSocket, Server as SocketIOServer } from 'socket.io'
 import { Socket as SocketIOClientSocket } from 'socket.io-client'
 import {
   StandardJSONResponse,
-  WebSocketMessage, WebSocketEevent, WebSocketPayload, WebSocketTunnel,
+  WebSocketMessage, WebSocketEeventData, WebSocketEevent, WebSocketTunnel,
   CommandError
 } from '../typings'
 
@@ -49,15 +49,15 @@ export default class Server extends BaseService {
 
     this.listen('status', this.status.bind(this))
     this.listen('login', this.login.bind(this))
-    this.listen('upload', this.upload.bind(this), true)
+    this.listen('upload', this.upload.bind(this))
 
     const connection = (socket: SocketIOSocket) => {
       const stdout = StdoutServ.born(socket.id)
       const onMessage = (message: any, stream?: SocketStream) => {
-        let { action, payload } = message
+        let { action, token, payload } = message
         this.events.forEach((event) => {
           if (event.type === action) {
-            event.action(socket, action, payload, stream || null, stdout)
+            event.action(socket, action, { token, payload, stream }, stdout)
           }
         })
       }
@@ -137,19 +137,21 @@ export default class Server extends BaseService {
     tunnel.stdout.log('deploy complete')
   }
 
-  public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>, stream: boolean = false): void {
-    const action = async (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, payload: WebSocketPayload, stream: SocketStream, stdout: Stdout): Promise<any> => {
+  public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>): void {
+    const action = async (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, data: WebSocketEeventData, stdout: Stdout): Promise<any> => {
+      const { token, payload, stream } = data
       const send = this.feedback.bind(this, socket)
-      const feedback = this.feedback.bind(this, socket, action)
+      const feedback = this.feedback.bind(this, socket, action, token)
       return listener({ socket, payload, stream, send, feedback, stdout })
     }
 
-    this.events.push({ type, action, stream })
+    this.events.push({ type, action })
   }
 
-  public feedback (socket: SocketIOSocket | typeof SocketIOClientSocket, type: string, data: StandardJSONResponse = {}): void {
+  public feedback (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, token: string, data: StandardJSONResponse = {}): void {
     const params: WebSocketMessage = {
-      action: type,
+      action: action,
+      token: token,
       payload: this.genStandardResponse(data)
     }
 
