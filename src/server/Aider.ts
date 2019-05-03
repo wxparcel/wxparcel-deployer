@@ -1,12 +1,12 @@
 import SocketIO = require('socket.io')
 import SocketIOClient = require('socket.io-client')
-import SocketIOStream = require('socket.io-stream')
 import OptionManager from './OptionManager'
 import DevTool from '../libs/DevTool'
 import BaseService from './WebSocket'
+import StreamSocket from '../libs/StreamSocket'
 import SocketStream from '../libs/SocketStream'
 import StdoutServ from '../services/stdout'
-import { SocketToken } from '../conf/token'
+import { SocketToken, SocketStreamToken } from '../conf/token'
 
 import {
   StandardJSONResponse,
@@ -46,7 +46,6 @@ export default class Aider extends BaseService {
 
       const connection = (socket: SocketIO.Socket) => {
         const stdout = StdoutServ.born(socket.id)
-
         const onMessage = (message: any, stream?: SocketStream) => {
           let { action, token, payload } = message
           this.events.forEach((event) => {
@@ -57,7 +56,9 @@ export default class Aider extends BaseService {
         }
 
         socket.on(SocketToken, onMessage)
-        SocketIOStream(socket).on(SocketToken, onMessage)
+
+        const streamSocket = new StreamSocket(socket)
+        streamSocket.on(SocketStreamToken, onMessage)
 
         resolve()
       }
