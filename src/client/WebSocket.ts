@@ -42,7 +42,7 @@ export default class Client extends BaseClient {
     })
   }
 
-  public async status (): Promise<any> {
+  public status (): Promise<any> {
     return this.send('status')
   }
 
@@ -128,6 +128,10 @@ export default class Client extends BaseClient {
       const readStream = fs.createReadStream(zipFile)
       readStream.pipe(socketStream)
     })
+  }
+
+  public access (): Promise<any> {
+    return this.send('access')
   }
 
   public send (type: string, payload: any = null, token?: string): Promise<any> {

@@ -1,6 +1,4 @@
-import os = require('os')
 import fs = require('fs-extra')
-import path = require('path')
 import ip = require('ip')
 import program = require('commander')
 import portscanner = require('portscanner')
@@ -10,33 +8,13 @@ import StdoutServ from '../services/stdout'
 import OptionManager from '../server/OptionManager'
 import Server from '../server'
 import { spawnPromisify } from '../share/fns'
+import { cli as CLI, ide as IDE } from '../conf/cli'
 import * as pkg from '../../package.json'
 import { ServerCLIOptions } from '../typings'
 
-const startDevtoolAndGetPort = (cli?: string, ide?: string) => {
-  const isOSX = 'darwin' === os.platform()
-  const isWin = 'win32' === os.platform()
-
-  if (!cli) {
-    if (isOSX) {
-      cli = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
-    }
-  }
-
+const startDevtoolAndGetPort = (cli: string = CLI, ide: string = IDE) => {
   return spawnPromisify(cli).then(() => {
     if (ide) {
-      return fs.readFile(ide)
-    }
-
-    if (isOSX) {
-      let relative = '/Library/Application Support/微信web开发者工具/Default/.ide'
-      ide = path.join(os.homedir(), relative)
-      return fs.readFile(ide)
-    }
-
-    if (isWin) {
-      let relative = '/AppData/Local/微信web开发者工具/User Data/Default/.ide'
-      ide = path.join(os.homedir(), relative)
       return fs.readFile(ide)
     }
 
@@ -115,8 +93,8 @@ program
 .command('server')
 .description('start deploy server')
 .option('-c, --config <config>', 'settting config file')
-.option('-p, --port <port>', 'setting server port, default use idle port')
+.option('-p, --port <port>', 'setting server port, default use idle port, default: 3000')
 .option('-d, --devtool <devtool>', 'setting devtool server')
-.option('--devtool-cli <devtool-cli>', 'setting devtool cli')
-.option('--devtool-ide <devtool-ide>', 'setting devtool ide')
+.option('--devtool-cli <devtool-cli>', `setting devtool cli, default: ${CLI}`)
+.option('--devtool-ide <devtool-ide>', `setting devtool ide, default: ${IDE}`)
 .action(server)

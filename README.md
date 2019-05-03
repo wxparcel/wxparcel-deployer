@@ -12,14 +12,11 @@
 ```
 # 开启发布工具服务
 # 设置微信小程序开发工具 cli 所在位置
-$ wxparcel-deployer server --dev-tool-cli /Applications/wechatwebdevtools.app/Contents/MacOS/cli
-
-# 设置微信小程序开发工具 http 服务
-$ wxparcel-deployer server --dev-tool-serv http://127.0.0.1:512345
+$ wxparcel-deployer server --devtool-cli /path/to/cli
 
 # 发布项目
 # 设置微信小程序发布服务地址 (注意必须带上协议)
-$ wxparcel-deployer deploy --server http://127.0.0.1:3000
+$ wxparcel-deployer upload --server http://127.0.0.1:3000
 ```
 
 ## 本地开发调试工具

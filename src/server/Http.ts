@@ -9,6 +9,7 @@ import Connection from '../libs/Connection'
 import OptionManager from './OptionManager'
 import Queue from '../services/queue'
 import { Stdout } from '../services/stdout'
+import UserServ from '../services/user'
 import Aider from './Aider'
 import { ensureDirs, unzip, removeFiles } from '../share/fns'
 
@@ -19,7 +20,6 @@ export default class Server extends BaseService {
   public options: OptionManager
   public devTool: DevTool
   public server: HttpServer
-  public isLogin: boolean
   public socket: Aider
 
   get httpServer () {
@@ -32,7 +32,6 @@ export default class Server extends BaseService {
     this.options = options
     this.devTool = devTool || new DevTool(this.options)
     this.server = server || new HttpServer()
-    this.isLogin = false
   }
 
   public start (): Promise<void> {
@@ -92,7 +91,7 @@ export default class Server extends BaseService {
       const command = async () => {
         const handleSuccess = (response) => {
           if (response.status === 'SUCCESS') {
-            this.isLogin = true
+            UserServ.login()
             return
           }
 
@@ -104,6 +103,7 @@ export default class Server extends BaseService {
           return Promise.reject(error)
         }
 
+        UserServ.logout()
         return this.devTool.login(feedbackQrCode).then(handleSuccess).catch(catchError)
       }
 
@@ -116,7 +116,7 @@ export default class Server extends BaseService {
   }
 
   public async access (tunnel: Tunnel): Promise<void> {
-    tunnel.feedback({ message: this.isLogin === true ? 'logined' : 'unlogined' })
+    tunnel.feedback({ message: UserServ.isLogin === true ? 'logined' : 'unlogined' })
   }
 
   public async activate (tunnel: Tunnel): Promise<void> {

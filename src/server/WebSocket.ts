@@ -8,6 +8,7 @@ import DevTool from '../libs/DevTool'
 import StreamSocket from '../libs/StreamSocket'
 import SocketStream from '../libs/SocketStream'
 import StdoutServ, { Stdout } from '../services/stdout'
+import UserServ from '../services/user'
 import { ensureDirs, unzip, removeFiles } from '../share/fns'
 import { SocketToken, SocketStreamToken } from '../conf/token'
 
@@ -50,6 +51,7 @@ export default class Server extends BaseService {
     this.listen('status', this.status.bind(this))
     this.listen('login', this.login.bind(this))
     this.listen('upload', this.upload.bind(this))
+    this.listen('access', this.access.bind(this))
 
     const connection = (socket: SocketIOSocket) => {
       const stdout = StdoutServ.born(socket.id)
@@ -86,6 +88,7 @@ export default class Server extends BaseService {
         tunnel.send('qrcode', { data: qrcode })
       }
 
+      UserServ.logout()
       return this.devTool.login(sendQrcode)
     }
 
@@ -97,6 +100,7 @@ export default class Server extends BaseService {
 
     const response = await this.execute(command).catch(catchError)
     if (response.status === 'SUCCESS') {
+      UserServ.login()
       tunnel.feedback({ message: 'login success' })
       return
     }
@@ -135,6 +139,10 @@ export default class Server extends BaseService {
 
     tunnel.feedback({ message: 'deploy complete' })
     tunnel.stdout.log('deploy complete')
+  }
+
+  public async access (tunnel: WebSocketTunnel): Promise<void> {
+    tunnel.feedback({ message: UserServ.isLogin === true ? 'logined' : 'unlogined' })
   }
 
   public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>): void {

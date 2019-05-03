@@ -32,5 +32,5 @@ program
 .description('get devtool status')
 .option('-c, --config <config>', 'settting config file')
 .option('--server <server>', 'setting upload server url, default 0.0.0.0:3000')
-.option('--socket', 'setting websocket mode')
+.option('--socket', 'setting websocket mode, default false')
 .action(wrapClientAction(status))
