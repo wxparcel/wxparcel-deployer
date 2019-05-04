@@ -3,7 +3,10 @@ import path = require('path')
 import { spawn, SpawnOptions } from 'child_process'
 import Zip = require('jszip')
 import { promisify } from 'util'
-import { Stdout, ChildProcessMap, ClientZipSource } from '../typings'
+import {
+  ChildProcessStdout, ChildProcessMap,
+  ClientZipSource
+} from '../typings'
 
 // size
 // -------------
@@ -100,7 +103,7 @@ export const zip = (file: string, relativeTo: string, zip: Zip = new Zip()): Zip
 
 const processes: Array<ChildProcessMap> = []
 
-export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: Stdout, killToken?: Symbol): Promise<any> => {
+export const spawnPromisify = (cli: string, params?: Array<string>, options?: SpawnOptions, stdout?: ChildProcessStdout, killToken?: Symbol): Promise<any> => {
   return new Promise((resolve, reject) => {
     let cp = spawn(cli, params || [], options || {})
 
@@ -112,15 +115,15 @@ export const spawnPromisify = (cli: string, params?: Array<string>, options?: Sp
     if (killToken) {
       let token = killToken
       let kill = () => {
-        reject('Process has been killed')
-        cp.kill('SIGINT')
+        handleProcessExit()
+        reject(new Error('Process has been killed'))
       }
 
       processes.push({ token, kill })
     }
 
     cp.on('exit', (code) => resolve(code))
-    cp.on('SIGINT', () => reject('Process has been killed'))
+    cp.on('SIGINT', () => reject(new Error('Process has been killed')))
 
     let handleProcessSigint = process.exit.bind(process)
     let handleProcessExit = () => {
@@ -137,18 +140,4 @@ export const spawnPromisify = (cli: string, params?: Array<string>, options?: Sp
     process.on('exit', handleProcessExit)
     process.on('SIGINT', handleProcessSigint)
   })
-}
-
-export const killToken = () => {
-  return Symbol('Kill Token')
-}
-
-export const killProcess = (token: Symbol) => {
-  let index = processes.findIndex((item) => item.token === token)
-  if (-1 === index) {
-    return
-  }
-
-  let [cp] = processes.splice(index, 1)
-  cp.kill()
 }

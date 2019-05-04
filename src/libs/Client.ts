@@ -1,4 +1,5 @@
 import fs = require('fs-extra')
+import trim = require('lodash/trim')
 import path = require('path')
 import { promisify } from 'util'
 import commandExists = require('command-exists')
@@ -30,36 +31,59 @@ export default class Client {
       fs.ensureDirSync(path.dirname(zipFile))
 
       const writeStream = fs.createWriteStream(zipFile)
-      writeStream.once('error', reject)
-      writeStream.once('close', resolve)
+      writeStream.once('error', reject).once('close', resolve)
 
-      const readStream = zip.generateNodeStream({ streamFiles: true })
-      readStream.pipe(writeStream)
-      readStream.once('error', reject)
-      readStream.once('end', () => writeStream.close())
+      zip
+      .generateNodeStream({ streamFiles: true })
+      .pipe(writeStream)
+      .once('finish', () => writeStream.close())
+      .once('error', reject)
     })
   }
 
-  public async getGitMessage (folder: string): Promise<string> {
+  public async checkGit (folder: string): Promise<boolean> {
     const git = path.join(folder, '.git')
     const exists = fs.existsSync(git)
     if (!exists) {
-      return ''
+      return false
     }
 
     const support = await promisify(commandExists.bind(null))('git')
     if (!support) {
+      return false
+    }
+
+    return true
+  }
+
+  public async getGitMessage (folder: string): Promise<string> {
+    if (!this.checkGit(folder)) {
       return ''
     }
 
     let message = ''
-    await spawnPromisify('git', ['log', '-1', '--pretty=%B'], {}, (buffer, type) => {
+    await spawnPromisify('git', ['log', '-1', '--format=%an%n%ae%n%cd%n%h%n%B'], {}, (buffer, type) => {
       if (type === 'out') {
-        message = buffer.toString()
+        message += buffer.toString()
       }
     })
 
-    return message
+    return trim(message, '\n')
+  }
+
+  public async getGitRepo (folder: string): Promise<string> {
+    if (!this.checkGit(folder)) {
+      return ''
+    }
+
+    let repo = ''
+    await spawnPromisify('git', ['config', '--get', 'remote.origin.url'], {}, (buffer, type) => {
+      if (type === 'out') {
+        repo += buffer.toString()
+      }
+    })
+
+    return trim(repo, '\n')
   }
 
   public async getProjectConfig (folder: string): Promise<any> {

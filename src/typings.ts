@@ -1,76 +1,136 @@
-import { IncomingMessage as HttpIncomingMessage, ServerResponse as HttpServerResponse } from 'http'
-import HttpConnection from './libs/HttpConnection'
+import { Socket as SocketIOSocket } from 'socket.io'
+import { Socket as SocketIOClientSocket } from 'socket.io-client'
+import Connection from './libs/Connection'
+import SocketStream from './libs/SocketStream'
+import { Stdout as StdoutService } from './services/stdout'
 
-export type Stdout = (data: Buffer, type?: string) => void
+export type ChildProcessStdout = (data: Buffer, type?: string) => void
 
 export interface ChildProcessMap {
   token: Symbol
   kill: () => void
 }
 
-export interface CommandError extends Error {
-  code?: number
+export interface StdoutOptions {
+  autoDatetime?: boolean
 }
 
-// server
-// -----------------
-
-export interface StandardResponse {
-  status?: number
-  code?: number
-  data?: any
-  message?: string
-}
-
-export type HTTPServerRoute = (connection: HttpConnection, request: HttpIncomingMessage, response: HttpServerResponse) => Promise<any>
-export type HTTPServerRouteHandler = (params: any, connection: HttpConnection) => Promise<any>
-
-// logger
-// -----------------
-
-export enum LogTypes {
-  console
-}
-
-export interface LoggerOptions {
-  type?: keyof typeof LogTypes
-}
-
-// Options
-// --------------
-
-export interface BaseOptions {
-  uid?: string
-  tempPath?: string
-  maxFileSize?: number
-  logType?: keyof typeof LogTypes
-}
-export interface ServerBaseOptions extends BaseOptions {
-  uploadPath?: string
-  deployPath?: string
-  qrcodePath?: string
-  devToolCli?: string
-  devToolServer?: string
-  port?: number
-}
-export interface ClientBaseOptions extends BaseOptions {
-  releasePath?: string
-  server?: string
-}
-export interface ServerCLIOptions {
-  config?: string
-  port?: number
-  devToolCli?: string
-  devToolServ?: string
-}
 export interface ClientCLIOptions {
   config?: string
   version?: string
   message?: string
   folder?: string
   server?: string
-  socket?: any
+  socket?: boolean
 }
+
+export interface ServerCLIOptions {
+  config?: string
+  port?: number
+  devtool?: string
+  devtoolCli?: string
+  devtoolIde?: string
+}
+
+export interface BaseOptions {
+  tempPath?: string
+  maxFileSize?: number
+  logMethod?: string | Array<string>
+  isDevelop?: boolean
+}
+
+export interface ClientBaseOptions extends BaseOptions {
+  releasePath?: string
+  server?: string
+}
+
+export interface ServerBaseOptions extends BaseOptions {
+  uploadPath?: string
+  deployPath?: string
+  qrcodePath?: string
+  devToolServer?: string
+  port?: number
+}
+
+export enum LoggerMethods {
+  CONSOLE = 'CONSOLE',
+  FILE = 'FILE'
+}
+
+export enum LoggerTypes {
+  LOG = 'LOG',
+  OK = 'OK',
+  INFO = 'INFO',
+  WARN = 'WARN',
+  ERROR = 'ERROR',
+  CLEAR = 'CLEAR'
+}
+
+export interface LoggerOptions {
+  method?: string | Array<string>
+  logFile?: string
+}
+
+export type LoggerFormat = (content: string) => string
+export type LoggerHeads = Array<string | { content: string, format?: LoggerFormat }>
+export type LoggerMessages = Array<string | { content: string | Error, format?: LoggerFormat }>
+
+export type DevToolCommand = (statsFile: string, killToken: symbol) => Promise<any>
+
+export interface CommandError extends Error {
+  code?: number
+}
+
+export type ServiceCommand = (killToken: symbol) => Promise<void>
+
+export type Router = (connection: Connection, stdout: StdoutService) => Promise<any>
+export type RouterHandle = (params: any, connection: Connection, stdout: StdoutService) => Promise<any>
+
+export interface StandardJSONResponse {
+  status?: number
+  code?: number
+  data?: any
+  message?: string
+}
+
+export interface Tunnel extends Connection {
+  params: RegExpExecArray,
+  stdout: StdoutService,
+  feedback: (content?: StandardJSONResponse) => void
+}
+
+export interface WebSocketMessage {
+  token?: string
+  action: string
+  payload: any
+}
+
+export interface WebSocketPayload {
+  [key: string]: any
+}
+
+export interface WebSocketEeventData {
+  token?: string
+  payload: any
+  stream?: SocketStream
+}
+
+export interface WebSocketEevent {
+  type: string
+  action: (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, data: WebSocketEeventData, stdout: StdoutService) => Promise<any>
+}
+
+export interface WebSocketTunnel {
+  payload: WebSocketPayload
+  stream: SocketStream
+  stdout: StdoutService,
+  socket: SocketIOSocket | typeof SocketIOClientSocket
+  feedback: (content?: StandardJSONResponse) => void
+  send: (action: string, content?: StandardJSONResponse) => void
+}
+
+// Options
+// --------------
 
 export type DevToolQRCodeHandle = (qrcode: string | Buffer) => void
 
