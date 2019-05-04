@@ -28,6 +28,10 @@ export default class Server {
     this.httpServ.destroy()
     this.socketServ.destroy()
 
+    this.devTool = null
+    this.httpServ = null
+    this.socketServ = null
+
     this.destroy = Function.prototype as any
   }
 }

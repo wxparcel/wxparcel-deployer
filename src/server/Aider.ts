@@ -10,7 +10,7 @@ import { SocketToken, SocketStreamToken } from '../conf/token'
 
 import {
   StandardJSONResponse,
-  WebSocketEevent, WebSocketMessage
+  WebSocketEevent, WebSocketEeventData, WebSocketMessage
 } from '../typings'
 
 export default class Aider extends BaseService {
@@ -23,6 +23,10 @@ export default class Aider extends BaseService {
   constructor (id: string, options: OptionManager, devTool: DevTool) {
     super(options, devTool)
     this.id = id
+
+    this.listen('status', this.status.bind(this))
+    this.listen('login', this.login.bind(this))
+    this.listen('upload', this.upload.bind(this))
   }
 
   public connect (url: string): Promise<void> {
@@ -40,34 +44,55 @@ export default class Aider extends BaseService {
 
       this.socket = SocketIOClient(url, params)
 
-      this.listen('status', this.status.bind(this))
-      this.listen('login', this.login.bind(this))
-      this.listen('upload', this.upload.bind(this))
-
-      const connection = (socket: SocketIO.Socket) => {
-        const stdout = StdoutServ.born(socket.id)
-        const onMessage = (message: any, stream?: SocketStream) => {
+      let onConnection = (socket: SocketIO.Socket) => {
+        let stdout = StdoutServ.born(socket.id)
+        let onMessage = (message: any, stream?: SocketStream) => {
           let { action, token, payload } = message
-          this.events.forEach((event) => {
+
+          let hit = false
+          let len = this.events.length
+          for (let i = 0; i < len; i ++) {
+            let event = this.events[i]
             if (event.type === action) {
-              event.action(socket, action, { token, payload, stream }, stdout)
+              stdout.head('HIT').log(action)
+
+              let datas: WebSocketEeventData = { token, payload, stream }
+              event.action(socket, action, datas, stdout)
+
+              hit = true
+              break
             }
-          })
+          }
+
+          hit === false && stdout.head('MISS').log(action)
         }
 
+        let onDisconnect = () => {
+          stdout.log('disconnect')
+
+          socket.removeAllListeners()
+          streamSocket.destroy()
+          stdout.destory()
+
+          socket = undefined
+          streamSocket = undefined
+          stdout = undefined
+          onMessage = undefined
+          onDisconnect = undefined
+        }
+
+        socket.on('disconnect', onDisconnect)
         socket.on(SocketToken, onMessage)
 
-        const streamSocket = new StreamSocket(socket)
+        let streamSocket = new StreamSocket(socket)
         streamSocket.on(SocketStreamToken, onMessage)
 
         resolve()
       }
 
-      const disconnect = () => this.destroy()
-
-      this.socket.on('connect', connection)
+      this.socket.on('connect', onConnection)
       this.socket.on('connect_error', reject)
-      this.socket.on('disconnect', disconnect)
+      this.socket.on('disconnect', this.destroy.bind(this))
     })
   }
 

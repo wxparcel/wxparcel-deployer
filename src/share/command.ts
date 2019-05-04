@@ -1,9 +1,10 @@
 import fs = require('fs-extra')
 import ClientOptions from '../client/OptionManager'
 import Logger from '../libs/Logger'
-import Stdout from '../services/stdout'
+import Stdout, { Stdout as StdoutServ } from '../services/stdout'
+import { ClientCLIOptions } from '../typings'
 
-export const wrapClientAction = (action) => (options) => {
+export const wrapClientAction = (action: (options: ClientCLIOptions, globalOptions: ClientOptions, stdout: StdoutServ) => Promise<any>) => (options: ClientCLIOptions) => {
   const { config: configFile } = options
 
   let defaultOptions: any = {}
