@@ -53,24 +53,53 @@ export default class Server extends BaseService {
     this.listen('upload', this.upload.bind(this))
     this.listen('access', this.access.bind(this))
 
-    const connection = (socket: SocketIOSocket) => {
-      const stdout = StdoutServ.born(socket.id)
-      const onMessage = (message: any, stream?: SocketStream) => {
+    const onConnection = (socket: SocketIOSocket) => {
+      let stdout = StdoutServ.born(socket.id)
+      let onMessage = (message: any, stream?: SocketStream) => {
         let { action, token, payload } = message
-        this.events.forEach((event) => {
+
+        let hit = false
+        let len = this.events.length
+        for (let i = 0; i < len; i ++) {
+          let event = this.events[i]
           if (event.type === action) {
-            event.action(socket, action, { token, payload, stream }, stdout)
+            stdout.head('HIT').log(action)
+
+            let datas: WebSocketEeventData = { token, payload, stream }
+            event.action(socket, action, datas, stdout)
+
+            hit = true
+            break
           }
-        })
+        }
+
+        hit === false && stdout.head('MISS').log(action)
+      }
+
+      let onDisconnect = () => {
+        stdout.log('disconnect')
+
+        socket.removeAllListeners()
+        streamSocket.destroy()
+        stdout.destory()
+
+        socket = undefined
+        streamSocket = undefined
+        stdout = undefined
+        onMessage = undefined
+        onDisconnect = undefined
       }
 
       socket.on(SocketToken, onMessage)
+      socket.on('disconnect', onDisconnect)
 
-      const streamSocket = new StreamSocket(socket)
+      let streamSocket = new StreamSocket(socket)
       streamSocket.on(SocketStreamToken, onMessage)
+
+      stdout.log('connect')
     }
 
-    this.server.on('connection', connection)
+    this.server.on('connection', onConnection)
   }
 
   public async status (tunnel: WebSocketTunnel): Promise<void> {
