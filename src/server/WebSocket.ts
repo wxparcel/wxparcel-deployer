@@ -9,6 +9,7 @@ import StreamSocket from '../libs/StreamSocket'
 import SocketStream from '../libs/SocketStream'
 import StdoutServ, { Stdout } from '../services/stdout'
 import UserServ from '../services/user'
+import { Access } from '../decorators/route'
 import { ensureDirs, unzip, removeFiles } from '../share/fns'
 import { SocketToken, SocketStreamToken } from '../conf/token'
 
@@ -137,6 +138,7 @@ export default class Server extends BaseService {
     tunnel.feedback({ status: 401, message: JSON.stringify(response) })
   }
 
+  @Access
   public async upload (tunnel: WebSocketTunnel): Promise<void> {
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
@@ -177,15 +179,15 @@ export default class Server extends BaseService {
   public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>): void {
     const action = async (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, data: WebSocketEeventData, stdout: Stdout): Promise<any> => {
       const { token, payload, stream } = data
-      const send = this.feedback.bind(this, socket)
-      const feedback = this.feedback.bind(this, socket, action, token)
+      const send = (action: string, payload: any) => this.feedback(socket, action, payload, token)
+      const feedback = (payload: any) => this.feedback(socket, action, payload, token)
       return listener({ socket, payload, stream, send, feedback, stdout })
     }
 
     this.events.push({ type, action })
   }
 
-  public feedback (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, token: string, data: StandardJSONResponse = {}): void {
+  public feedback (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, data: StandardJSONResponse = {}, token: string = ''): void {
     const params: WebSocketMessage = {
       action: action,
       token: token,

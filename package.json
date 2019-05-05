@@ -1,6 +1,6 @@
 {
   "name": "wxparcel-deployer",
-  "version": "1.0.0-alpha.3.0",
+  "version": "1.0.0-alpha.3.1",
   "bin": "./bin/cli",
   "main": "./libs/index.js",
   "license": "MIT",
@@ -24,8 +24,8 @@
     "tslint": "tslint --config ./tslint.json --fix './src/**/*.ts'",
     "lint": "npm run tslint",
     "test": "npm run lint",
-    "compile": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5",
-    "compile:watch": "rimraf ./libs && tsc --outDir ./libs ./src/*.ts --target es5 --watch",
+    "compile": "rimraf ./libs && tsc --project ./ --outDir ./libs",
+    "compile:watch": "rimraf ./libs && tsc --project ./ --outDir ./libs --watch",
     "server": "node ./libs/cli.js server",
     "develop": "npm run compile:watch",
     "release": "npm run compile",

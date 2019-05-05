@@ -10,6 +10,7 @@ import OptionManager from './OptionManager'
 import Queue from '../services/queue'
 import { Stdout } from '../services/stdout'
 import UserServ from '../services/user'
+import { Access } from '../decorators/route'
 import Aider from './Aider'
 import { ensureDirs, unzip, removeFiles } from '../share/fns'
 
@@ -20,7 +21,7 @@ export default class Server extends BaseService {
   public options: OptionManager
   public devTool: DevTool
   public server: HttpServer
-  public socket: Aider
+  public aider: Aider
 
   get httpServer () {
     return this.server.httpServer
@@ -41,6 +42,7 @@ export default class Server extends BaseService {
     this.route('POST', '/upload', this.upload.bind(this))
     this.route('GET', '/login', this.login.bind(this))
     this.route('GET', '/access', this.access.bind(this))
+    this.route('POST', '/rely', this.rely.bind(this))
 
     return this.server.listen(port)
   }
@@ -49,6 +51,7 @@ export default class Server extends BaseService {
     tunnel.feedback({ message: 'okaya, server is running.' })
   }
 
+  @Access
   public async upload (tunnel: Tunnel): Promise<void> {
     const { uploadPath, deployPath } = this.options
     await ensureDirs(uploadPath, deployPath)
@@ -82,10 +85,17 @@ export default class Server extends BaseService {
   }
 
   public login (tunnel: Tunnel): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const feedbackQrCode = (qrcode: Buffer) => {
-        tunnel.feedback({ data: qrcode })
-        resolve()
+        if (qrcode.byteLength > 0) {
+          tunnel.feedback({ data: qrcode })
+          resolve()
+
+        } else {
+          let error = new Error('QRCode is empty')
+          tunnel.feedback({ status: 500, message: error.message })
+          reject(error)
+        }
       }
 
       const command = async () => {
@@ -119,27 +129,24 @@ export default class Server extends BaseService {
     tunnel.feedback({ message: UserServ.isLogin === true ? 'logined' : 'unlogined' })
   }
 
-  public async activate (tunnel: Tunnel): Promise<void> {
+  public async rely (tunnel: Tunnel): Promise<void> {
     const { request, feedback } = tunnel
     const { serverUrl, socketId, projectId } = await this.extract(request)
 
-    this.socket = await this.createAider(projectId, serverUrl, this.devTool)
+    this.aider = new Aider(projectId, this.options, this.devTool)
+    await this.aider.connect(serverUrl)
 
-    const disconnect = () => {
-      this.socket = null
+    let disconnect = () => {
+      this.aider.destroy()
+      this.aider = null
+      disconnect = undefined
     }
 
     const data = { socketId, projectId }
-    this.socket.on('disconnect', disconnect)
-    this.socket.send('connectSuccess', { data })
+    this.aider.socket.on('disconnect', disconnect)
+    this.aider.send('connectSuccess', { data })
 
     feedback()
-  }
-
-  public async createAider (id: string, server: string, devTool: DevTool) {
-    let socket = new Aider(id, this.options, devTool)
-    await socket.connect(server)
-    return socket
   }
 
   public route (methods: string | Array<string>, path: string, handle: (tunnel: Tunnel) => Promise<void>) {

@@ -1,3 +1,11 @@
 #!/usr/bin/env node
+
 const path = require('path')
-require(path.join(__dirname, '../libs/cli'))
+const fs = require('fs')
+const file = path.join(__dirname, '../libs/src/cli.js')
+
+if (!fs.existsSync(file)) {
+  throw new Error(`Cli file is not found, please run after compiled`)
+}
+
+require(file)

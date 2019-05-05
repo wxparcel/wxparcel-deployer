@@ -24,7 +24,7 @@ export default class Client extends BaseClient {
     this.options = options
   }
 
-  public async connect (server: string = `${ip.address()}:3000`): Promise<void> {
+  public async connect (server: string = `http://${ip.address()}:3000`): Promise<void> {
     return new Promise((resolve, reject) => {
       const params = {
         reconnection: true,

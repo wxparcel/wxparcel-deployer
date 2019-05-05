@@ -4,8 +4,9 @@ import HttpClient from '../client/Http'
 import WebSocketClient from '../client/WebSocket'
 import { Stdout } from '../services/stdout'
 import { wrapClientAction } from '../share/command'
+import { ClientCLIOptions } from '../typings'
 
-const access = async (options, globalOptions: ClientOptions, stdout: Stdout) => {
+const access = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions, stdout: Stdout) => {
   const catchError = (error) => {
     stdout.error(error)
     process.exit(3)

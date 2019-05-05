@@ -1,5 +1,6 @@
 import SocketIO = require('socket.io')
 import SocketIOClient = require('socket.io-client')
+import shortid = require('shortid')
 import OptionManager from './OptionManager'
 import DevTool from '../libs/DevTool'
 import BaseService from './WebSocket'
@@ -96,13 +97,10 @@ export default class Aider extends BaseService {
     })
   }
 
-  public on (type: string, fn: Function) {
-    this.socket.on(type, fn)
-  }
-
-  public send (type: string, data: StandardJSONResponse = {}) {
+  public send (type: string, data: StandardJSONResponse = {}, token: string = shortid()) {
     const params: WebSocketMessage = {
       action: type,
+      token: token,
       payload: this.genStandardResponse(data)
     }
 

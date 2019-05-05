@@ -4,16 +4,17 @@ import HttpClient from '../client/Http'
 import WebSocketClient from '../client/WebSocket'
 import { Stdout } from '../services/stdout'
 import { wrapClientAction } from '../share/command'
+import { ClientCLIOptions } from '../typings'
 
-const login = async (options, globalOptions: ClientOptions, stdout: Stdout) => {
+const login = async (options: ClientCLIOptions = {}, globalOptions: ClientOptions, stdout: Stdout) => {
   const catchError = (error) => {
     stdout.error(error)
     process.exit(3)
   }
 
   const showQRcode = (qrcode: string) => {
-    stdout.info('please scan the QR code to login')
-    stdout.log(qrcode)
+    console.log('please scan the QR code to login')
+    console.log(qrcode)
   }
 
   if (options.socket) {
