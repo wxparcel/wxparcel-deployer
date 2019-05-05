@@ -12,8 +12,8 @@ const login = async (options, globalOptions: ClientOptions, stdout: Stdout) => {
   }
 
   const showQRcode = (qrcode: string) => {
-    stdout.info('please scan the QR code to login')
-    stdout.log(qrcode)
+    console.log('please scan the QR code to login')
+    console.log(qrcode)
   }
 
   if (options.socket) {

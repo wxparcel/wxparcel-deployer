@@ -179,11 +179,12 @@ export default class DevTool {
       let watcher = fs.watch(file, { persistent: true }, (eventType: string) => {
         switch (eventType) {
           case 'change': {
-            watcher.close()
-
             try {
               let content = fs.readFileSync(file)
-              resolve(content)
+              if (content.byteLength > 0) {
+                resolve(content)
+                watcher.close()
+              }
 
             } catch (error) {
               reject(new Error(error))

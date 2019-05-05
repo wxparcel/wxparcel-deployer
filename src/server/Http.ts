@@ -82,10 +82,17 @@ export default class Server extends BaseService {
   }
 
   public login (tunnel: Tunnel): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const feedbackQrCode = (qrcode: Buffer) => {
-        tunnel.feedback({ data: qrcode })
-        resolve()
+        if (qrcode.byteLength > 0) {
+          tunnel.feedback({ data: qrcode })
+          resolve()
+
+        } else {
+          let error = new Error('QRCode is empty')
+          tunnel.feedback({ status: 500, message: error.message })
+          reject(error)
+        }
       }
 
       const command = async () => {

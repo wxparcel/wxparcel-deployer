@@ -177,7 +177,7 @@ export default class Server extends BaseService {
   public listen (type: string, listener: (tunnel: WebSocketTunnel) => Promise<any>): void {
     const action = async (socket: SocketIOSocket | typeof SocketIOClientSocket, action: string, data: WebSocketEeventData, stdout: Stdout): Promise<any> => {
       const { token, payload, stream } = data
-      const send = this.feedback.bind(this, socket)
+      const send = (action: string, payload: any) => this.feedback(socket, action, token, payload)
       const feedback = this.feedback.bind(this, socket, action, token)
       return listener({ socket, payload, stream, send, feedback, stdout })
     }
